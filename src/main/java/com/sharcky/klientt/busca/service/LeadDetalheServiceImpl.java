@@ -1,0 +1,32 @@
+package com.sharcky.klientt.busca.service;
+
+import com.sharcky.klientt.busca.dto.LeadDetalhe;
+import com.sharcky.klientt.busca.mapper.LeadDetalheMapper;
+import com.sharcky.klientt.busca.scoring.AvaliadorLead;
+import com.sharcky.klientt.empresa.model.Empresa;
+import com.sharcky.klientt.empresa.repository.EmpresaRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class LeadDetalheServiceImpl implements LeadDetalheService {
+
+    private final EmpresaRepository empresaRepository;
+    private final AvaliadorLead avaliador;
+    private final LeadDetalheMapper detalheMapper;
+
+    public LeadDetalheServiceImpl(EmpresaRepository empresaRepository, AvaliadorLead avaliador,
+                                  LeadDetalheMapper detalheMapper) {
+        this.empresaRepository = empresaRepository;
+        this.avaliador = avaliador;
+        this.detalheMapper = detalheMapper;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LeadDetalhe detalhe(Long empresaId) {
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new IllegalArgumentException("Empresa não encontrada: " + empresaId));
+        return detalheMapper.toDetalhe(empresa, avaliador.avaliar(empresa));
+    }
+}

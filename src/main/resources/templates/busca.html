@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klientt — encontre clientes que precisam de si</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script src="https://unpkg.com/htmx.org@2.0.4" crossorigin="anonymous"></script>
+</head>
+<body>
+<header class="topo">
+    <div class="container barra-topo">
+        <div>
+            <h1 class="logo">Klientt</h1>
+            <p class="tagline">Encontre empresas que precisam do seu serviço — não apenas uma lista de telefones.</p>
+        </div>
+        <div class="utilizador">
+            <span>Olá, <strong sec:authentication="principal.nome">utilizador</strong></span>
+            <a class="btn-link" th:href="@{/conta}">A minha conta</a>
+            <form method="post" th:action="@{/logout}">
+                <button type="submit" class="btn-link">Sair</button>
+            </form>
+        </div>
+    </div>
+</header>
+
+<main class="container">
+    <form class="busca-form"
+          hx-post="/buscar"
+          hx-target="#resultados"
+          hx-swap="innerHTML"
+          hx-indicator="#loading">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <div class="campo">
+            <label for="tipo">Tipo de busca</label>
+            <select id="tipo" name="tipo">
+                <option value="NICHO">Por nicho</option>
+                <option value="NOME">Por nome da empresa</option>
+            </select>
+        </div>
+        <div class="campo cresce">
+            <label for="termo">O que procura?</label>
+            <input type="text" id="termo" name="termo"
+                   placeholder="ex.: barbearias, restaurantes, clínicas..." required>
+        </div>
+        <div class="campo">
+            <label for="regiao">Cidade / região</label>
+            <input type="text" id="regiao" name="regiao" placeholder="ex.: São Paulo">
+        </div>
+        <button type="submit" class="btn">Buscar</button>
+    </form>
+
+    <div id="loading" class="loading htmx-indicator">A procurar e enriquecer empresas…</div>
+
+    <section id="resultados" class="resultados">
+        <p class="vazio">Faça uma busca para ver os leads e o score de oportunidade.</p>
+    </section>
+</main>
+
+<!-- Contentor do modal de detalhe (preenchido via HTMX ao clicar num lead) -->
+<div id="modal-container"></div>
+</body>
+</html>

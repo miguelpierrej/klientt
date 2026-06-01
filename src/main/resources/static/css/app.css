@@ -1,0 +1,255 @@
+:root {
+    --azul: #2563eb;
+    --azul-escuro: #1e3a8a;
+    --ok: #16a34a;
+    --alerta: #d97706;
+    --perigo: #dc2626;
+    --cinza: #64748b;
+    --fundo: #f8fafc;
+    --borda: #e2e8f0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--fundo);
+    color: #0f172a;
+    line-height: 1.5;
+}
+
+.container { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+
+/* Cabeçalho */
+.topo {
+    background: linear-gradient(135deg, var(--azul) 0%, var(--azul-escuro) 100%);
+    color: #fff;
+    padding: 40px 0 32px;
+}
+.logo { margin: 0; font-size: 2.2rem; letter-spacing: -1px; }
+.tagline { margin: 6px 0 0; opacity: .9; }
+
+/* Barra de topo (utilizador + logout) */
+.barra-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.utilizador { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+.utilizador span { color: #e0e7ff; font-size: .9rem; }
+.btn-link {
+    background: rgba(255, 255, 255, .15);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, .3);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .85rem;
+}
+.btn-link:hover { background: rgba(255, 255, 255, .25); }
+
+/* Páginas de conta (login / registo) */
+.conta { max-width: 420px; padding-top: 36px; }
+.conta h2 { margin: 0 0 4px; }
+.form-conta { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+.form-conta .campo { display: flex; flex-direction: column; gap: 6px; }
+.form-conta label { font-size: .8rem; font-weight: 600; color: var(--cinza); }
+.form-conta input {
+    padding: 10px 12px; border: 1px solid var(--borda); border-radius: 8px; font-size: 1rem;
+}
+.form-conta .btn { margin-top: 6px; }
+.erro-campo { color: var(--perigo); font-size: .82rem; }
+.ligacao { margin-top: 18px; font-size: .9rem; }
+.aviso { padding: 10px 14px; border-radius: 8px; font-size: .9rem; }
+.aviso.ok { background: #dcfce7; color: var(--ok); }
+.aviso.erro { background: #fee2e2; color: var(--perigo); }
+
+/* Card clicável */
+.lead.clicavel { cursor: pointer; transition: box-shadow .15s, transform .05s; }
+.lead.clicavel:hover { box-shadow: 0 4px 16px rgba(2, 6, 23, .12); border-color: var(--azul); }
+.lead.clicavel:active { transform: scale(.998); }
+
+/* Modal de detalhe */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, .55);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+    z-index: 1000;
+    overflow-y: auto;
+}
+.modal {
+    background: #fff;
+    border-radius: 14px;
+    max-width: 560px;
+    width: 100%;
+    padding: 24px 26px;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(2, 6, 23, .35);
+}
+.modal-fechar {
+    position: absolute;
+    top: 12px; right: 14px;
+    background: none; border: none;
+    font-size: 1.6rem; line-height: 1;
+    color: var(--cinza); cursor: pointer;
+}
+.modal-fechar:hover { color: #0f172a; }
+.modal-cabecalho h2 { margin: 0 0 4px; padding-right: 28px; }
+.modal-sub { margin: 0 0 8px; color: var(--cinza); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.modal-seccao { border-top: 1px solid var(--borda); padding-top: 12px; margin-top: 12px; }
+.modal-seccao h3 { margin: 0 0 8px; font-size: .95rem; }
+.modal-seccao dl { display: grid; grid-template-columns: 130px 1fr; gap: 4px 12px; margin: 0; }
+.modal-seccao dt { color: var(--cinza); font-size: .85rem; }
+.modal-seccao dd { margin: 0; }
+.modal-redes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.modal-redes li { display: flex; align-items: center; gap: 10px; }
+.rede-nome { font-weight: 600; text-transform: capitalize; min-width: 90px; }
+.rede-seg { color: var(--cinza); font-size: .85rem; }
+.modal-rodape { margin-top: 14px; }
+
+/* Página de conta */
+.cartao-conta {
+    background: #fff;
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-top: 16px;
+}
+.cartao-conta h3 { margin: 0 0 10px; }
+.cartao-conta p { margin: 6px 0; }
+.rotulo { display: inline-block; min-width: 70px; color: var(--cinza); font-size: .85rem; }
+.consumo-numeros { font-size: 1.05rem; }
+.barra-quota {
+    background: #e2e8f0;
+    border-radius: 999px;
+    height: 14px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+.barra-quota-preenchida {
+    background: var(--azul);
+    height: 100%;
+    border-radius: 999px;
+    transition: width .3s;
+}
+.barra-quota-preenchida.cheia { background: var(--perigo); }
+
+/* Formulário de busca */
+.busca-form {
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    background: #fff;
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 18px;
+    margin-top: -24px;
+    box-shadow: 0 8px 24px rgba(2, 6, 23, .08);
+}
+.campo { display: flex; flex-direction: column; gap: 6px; }
+.campo.cresce { flex: 1; min-width: 200px; }
+.campo label { font-size: .78rem; font-weight: 600; color: var(--cinza); text-transform: uppercase; }
+.campo input, .campo select {
+    padding: 10px 12px;
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    font-size: 1rem;
+}
+.btn {
+    background: var(--azul);
+    color: #fff;
+    border: none;
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn:hover { background: var(--azul-escuro); }
+
+/* Loading (HTMX indicator) */
+.loading { display: none; margin: 20px 0; color: var(--cinza); font-style: italic; }
+.htmx-request #loading, #loading.htmx-request { display: block; }
+
+/* Resultados */
+.resultados { margin: 28px 0 60px; }
+.vazio { color: var(--cinza); text-align: center; padding: 40px 0; }
+.resultados-cabecalho h2 { margin: 0 0 4px; font-size: 1.3rem; }
+.ajuda { margin: 0 0 16px; color: var(--cinza); font-size: .9rem; }
+
+/* Barra de filtros */
+.filtros {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    background: #fff;
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+}
+.filtro-ordenar { font-size: .85rem; color: var(--cinza); display: flex; align-items: center; gap: 6px; }
+.filtro-ordenar select { padding: 6px 8px; border: 1px solid var(--borda); border-radius: 6px; font-size: .9rem; }
+.filtros .check { display: flex; align-items: center; gap: 5px; font-size: .88rem; cursor: pointer; }
+.contagem { margin: 0 0 10px; color: var(--cinza); font-size: .9rem; }
+
+.lista-leads { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.lead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    background: #fff;
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 16px 18px;
+}
+.lead-info h3 { margin: 0; font-size: 1.05rem; }
+.cidade { margin: 2px 0 10px; color: var(--cinza); font-size: .88rem; }
+
+.sinais { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag {
+    font-size: .78rem;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: var(--cinza);
+    white-space: nowrap;
+}
+.tag.ok { background: #dcfce7; color: var(--ok); }
+.tag.alerta { background: #fef3c7; color: var(--alerta); }
+.tag.perigo { background: #fee2e2; color: var(--perigo); font-weight: 600; }
+
+.lead-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 64px;
+}
+.score-num { font-size: 1.8rem; font-weight: 700; color: var(--azul); }
+.score-label { font-size: .72rem; color: var(--cinza); text-transform: uppercase; }
+
+/* Mensagem de espera (polling) */
+.loading-ativo {
+    color: var(--azul);
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 8px;
+    font-style: italic;
+}
+
+/* Caixa de erro / validação */
+.erro-box {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: var(--perigo);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 8px;
+}
+.erro-box p { margin: 2px 0; }

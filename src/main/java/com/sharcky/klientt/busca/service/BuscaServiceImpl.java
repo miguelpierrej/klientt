@@ -1,0 +1,143 @@
+package com.sharcky.klientt.busca.service;
+
+import com.sharcky.klientt.busca.dto.BuscaRequest;
+import com.sharcky.klientt.busca.dto.FiltroBusca;
+import com.sharcky.klientt.busca.dto.LeadResponse;
+import com.sharcky.klientt.busca.dto.ResultadoBusca;
+import com.sharcky.klientt.busca.job.EstadoJob;
+import com.sharcky.klientt.busca.job.JobBusca;
+import com.sharcky.klientt.busca.job.JobResultado;
+import com.sharcky.klientt.busca.job.JobResultadoRepository;
+import com.sharcky.klientt.busca.job.JobService;
+import com.sharcky.klientt.busca.mapper.LeadMapper;
+import com.sharcky.klientt.busca.scoring.AvaliadorLead;
+import com.sharcky.klientt.conta.service.QuotaService;
+import com.sharcky.klientt.empresa.model.Empresa;
+import com.sharcky.klientt.empresa.repository.EmpresaRepository;
+import com.sharcky.klientt.scraper.client.ScraperClient;
+import com.sharcky.klientt.scraper.config.ScraperProperties;
+import com.sharcky.klientt.scraper.dto.ScrapeRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Comparator;
+import java.util.List;
+
+/**
+ * Orquestra o fluxo assíncrono de busca (ARQUITETURA §4): cria o job, dispara o
+ * scraper e, no polling, devolve o estado e (quando concluído) os leads pontuados.
+ */
+@Service
+public class BuscaServiceImpl implements BuscaService {
+
+    private static final Logger log = LoggerFactory.getLogger(BuscaServiceImpl.class);
+    private static final double NOTA_BAIXA = 4.0;
+    private static final int POUCOS_SEGUIDORES = 500;
+
+    private final JobService jobService;
+    private final QuotaService quotaService;
+    private final ScraperClient scraperClient;
+    private final ScraperProperties properties;
+    private final JobResultadoRepository jobResultadoRepository;
+    private final EmpresaRepository empresaRepository;
+    private final AvaliadorLead avaliador;
+    private final LeadMapper leadMapper;
+
+    public BuscaServiceImpl(JobService jobService, QuotaService quotaService, ScraperClient scraperClient,
+                            ScraperProperties properties, JobResultadoRepository jobResultadoRepository,
+                            EmpresaRepository empresaRepository, AvaliadorLead avaliador, LeadMapper leadMapper) {
+        this.jobService = jobService;
+        this.quotaService = quotaService;
+        this.scraperClient = scraperClient;
+        this.properties = properties;
+        this.jobResultadoRepository = jobResultadoRepository;
+        this.empresaRepository = empresaRepository;
+        this.avaliador = avaliador;
+        this.leadMapper = leadMapper;
+    }
+
+    @Override
+    public Long iniciar(BuscaRequest request, Long utilizadorId) {
+        quotaService.garantirDisponibilidade(utilizadorId);
+        // criar() é transacional e faz commit antes de dispararmos o scraper — assim o
+        // callback assíncrono encontra sempre o job já persistido.
+        Long jobId = jobService.criar(request, utilizadorId);
+        dispararScraper(jobId, request);
+        return jobId;
+    }
+
+    private void dispararScraper(Long jobId, BuscaRequest request) {
+        ScrapeRequest scrapeRequest = new ScrapeRequest(
+                String.valueOf(jobId), request.tipo(), request.termo(), request.regiao(),
+                properties.getLimiteDefault(), properties.callbackUrl());
+        try {
+            scraperClient.iniciarBusca(scrapeRequest);
+        } catch (Exception ex) {
+            log.error("Falha ao iniciar scraper para jobId={}", jobId, ex);
+            jobService.marcarErro(jobId);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ResultadoBusca consultar(Long jobId, Long utilizadorId) {
+        JobBusca job = jobDoUtilizador(jobId, utilizadorId);
+
+        if (job.getEstado() != EstadoJob.CONCLUIDO) {
+            return new ResultadoBusca(jobId, job.getTermo(), job.getEstado(), List.of(), null);
+        }
+
+        List<LeadResponse> leads = leadsDoJob(jobId).stream()
+                .sorted(Comparator.comparingInt(LeadResponse::score).reversed())
+                .toList();
+
+        return new ResultadoBusca(jobId, job.getTermo(), job.getEstado(), leads, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LeadResponse> filtrar(Long jobId, Long utilizadorId, FiltroBusca filtro) {
+        JobBusca job = jobDoUtilizador(jobId, utilizadorId);
+        if (job.getEstado() != EstadoJob.CONCLUIDO) {
+            return List.of();
+        }
+        return leadsDoJob(jobId).stream()
+                .filter(l -> !filtro.semSite() || !l.temSite())
+                .filter(l -> !filtro.notaBaixa() || l.notaGoogle() < NOTA_BAIXA)
+                .filter(l -> !filtro.poucosSeguidores() || l.seguidores() < POUCOS_SEGUIDORES)
+                .filter(l -> !filtro.procon() || l.proconEviteSite())
+                .sorted(comparador(filtro.ordenarOuPadrao()))
+                .toList();
+    }
+
+    private Comparator<LeadResponse> comparador(com.sharcky.klientt.busca.dto.OrdenarPor ordenar) {
+        return switch (ordenar) {
+            case SCORE -> Comparator.comparingInt(LeadResponse::score).reversed();
+            case NOTA -> Comparator.comparingDouble(LeadResponse::notaGoogle);
+            case SEGUIDORES -> Comparator.comparingInt(LeadResponse::seguidores);
+            case NOME -> Comparator.comparing(LeadResponse::nome, String.CASE_INSENSITIVE_ORDER);
+        };
+    }
+
+    /** Job do utilizador ou exceção (não revela jobs de outros). */
+    private JobBusca jobDoUtilizador(Long jobId, Long utilizadorId) {
+        return jobService.obter(jobId)
+                .filter(j -> utilizadorId.equals(j.getUtilizadorId()))
+                .orElseThrow(() -> new BuscaNaoEncontradaException(jobId));
+    }
+
+    private List<LeadResponse> leadsDoJob(Long jobId) {
+        List<Long> empresaIds = jobResultadoRepository.findByJobId(jobId).stream()
+                .map(JobResultado::getEmpresaId)
+                .toList();
+        return empresaRepository.findAllById(empresaIds).stream()
+                .map(this::avaliarEMapear)
+                .toList();
+    }
+
+    private LeadResponse avaliarEMapear(Empresa empresa) {
+        return leadMapper.toResponse(empresa, avaliador.avaliar(empresa));
+    }
+}

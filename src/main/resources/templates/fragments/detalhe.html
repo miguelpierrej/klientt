@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Modal de detalhe do lead. Carregado via HTMX para #modal-container. -->
+<div th:fragment="modal" class="modal-overlay" onclick="if (event.target === this) this.remove()">
+    <div class="modal" role="dialog" aria-modal="true">
+        <button type="button" class="modal-fechar" aria-label="Fechar"
+                onclick="this.closest('.modal-overlay').remove()">&times;</button>
+
+        <header class="modal-cabecalho">
+            <h2 th:text="${lead.nome()}">Nome</h2>
+            <p class="modal-sub">
+                <span th:text="${lead.cidade()} ?: 'Cidade não informada'">cidade</span>
+                · score <strong th:text="${lead.score()}">0</strong>
+                <span class="tag perigo" th:if="${lead.proconEviteSite()}">⚠ Procon: Evite Sites</span>
+            </p>
+        </header>
+
+        <section class="modal-seccao">
+            <h3>Contacto</h3>
+            <dl>
+                <dt>Telefone</dt><dd th:text="${lead.telefone()} ?: '—'">—</dd>
+                <dt>Morada</dt><dd th:text="${lead.endereco()} ?: '—'">—</dd>
+                <dt>CNPJ</dt><dd th:text="${lead.cnpj()} ?: '—'">—</dd>
+                <dt>Website</dt>
+                <dd>
+                    <a th:if="${lead.website()}" th:href="${lead.website()}" target="_blank" rel="noopener"
+                       th:text="${lead.website()}">site</a>
+                    <span th:unless="${lead.website()}">—</span>
+                </dd>
+            </dl>
+        </section>
+
+        <section class="modal-seccao">
+            <h3>Sinais do site &amp; Google</h3>
+            <dl>
+                <dt>Nota Google</dt>
+                <dd th:text="${lead.notaGoogle() != null ? lead.notaGoogle() + ' ★' : '—'}">—</dd>
+                <dt>Avaliações</dt><dd th:text="${lead.numReviews()} ?: '—'">—</dd>
+                <dt>Tem site</dt>
+                <dd th:text="${lead.siteExiste() == null ? '—' : (lead.siteExiste() ? 'Sim' : 'Não')}">—</dd>
+                <dt>Velocidade</dt>
+                <dd th:text="${lead.siteVelocidadeMs() != null ? lead.siteVelocidadeMs() + ' ms' : '—'}">—</dd>
+                <dt>HTTPS</dt>
+                <dd th:text="${lead.siteHttps() == null ? '—' : (lead.siteHttps() ? 'Sim' : 'Não')}">—</dd>
+                <dt>Nº de páginas</dt><dd th:text="${lead.siteNumPaginas()} ?: '—'">—</dd>
+                <dt>Reputação</dt><dd th:text="${lead.siteReputacao()} ?: '—'">—</dd>
+            </dl>
+        </section>
+
+        <section class="modal-seccao">
+            <h3>Redes sociais</h3>
+            <p class="vazio" th:if="${#lists.isEmpty(lead.redes())}">Sem redes detetadas.</p>
+            <ul class="modal-redes" th:unless="${#lists.isEmpty(lead.redes())}">
+                <li th:each="r : ${lead.redes()}">
+                    <span class="rede-nome" th:text="${r.rede()}">rede</span>
+                    <a th:if="${r.url()}" th:href="${r.url()}" target="_blank" rel="noopener">abrir</a>
+                    <span class="rede-seg"><strong th:text="${r.seguidores()} ?: '—'">0</strong> seguidores</span>
+                </li>
+            </ul>
+        </section>
+
+        <footer class="modal-rodape">
+            <span class="ajuda">Atualizado em <span th:text="${lead.atualizadoEm()}">—</span></span>
+        </footer>
+    </div>
+</div>
+
+</body>
+</html>

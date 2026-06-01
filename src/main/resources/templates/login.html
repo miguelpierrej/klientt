@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klientt — entrar</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="topo">
+    <div class="container">
+        <h1 class="logo">Klientt</h1>
+    </div>
+</header>
+
+<main class="container conta">
+    <h2>Entrar</h2>
+
+    <p class="aviso ok" th:if="${param.registado}">Conta criada! Já pode entrar.</p>
+    <p class="aviso ok" th:if="${param.logout}">Sessão terminada.</p>
+    <p class="aviso erro" th:if="${param.error}">Email ou password inválidos.</p>
+
+    <form method="post" th:action="@{/login}" class="form-conta">
+        <div class="campo">
+            <label for="username">Email</label>
+            <input type="email" id="username" name="username" required autofocus>
+        </div>
+        <div class="campo">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit" class="btn">Entrar</button>
+    </form>
+
+    <p class="ligacao">Ainda não tem conta? <a th:href="@{/registo}">Criar conta grátis</a></p>
+</main>
+</body>
+</html>

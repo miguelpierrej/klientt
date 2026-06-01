@@ -1,0 +1,24 @@
+# Klientt — infraestrutura de desenvolvimento.
+# Por agora só o MySQL (a app Spring corre localmente via ./mvnw).
+# O serviço Python/FastAPI será adicionado aqui mais tarde.
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: klientt-mysql
+    environment:
+      MYSQL_DATABASE: klientt
+      MYSQL_USER: klientt
+      MYSQL_PASSWORD: klientt
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - klientt_mysqldata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uklientt", "-pklientt"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  klientt_mysqldata:

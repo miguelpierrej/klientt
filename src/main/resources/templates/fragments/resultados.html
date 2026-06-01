@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Espera: faz polling do estado do job e substitui-se a si próprio até concluir -->
+<div th:fragment="aguardar" id="busca-poll"
+     th:attr="hx-get=@{/buscar/{id}(id=${jobId})}"
+     hx-trigger="every 1500ms"
+     hx-swap="outerHTML">
+    <p class="loading-ativo">⏳ A procurar e enriquecer empresas… (atualiza automaticamente)</p>
+</div>
+
+<!-- Resultados (estado final): cabeçalho + barra de filtros + lista -->
+<div th:fragment="lista">
+    <div class="resultados-cabecalho">
+        <h2>Resultados para &laquo;<span th:text="${termo}">termo</span>&raquo;</h2>
+        <p class="ajuda">Filtre e ordene à esquerda. Clique num lead para ver tudo.</p>
+    </div>
+
+    <form class="filtros"
+          th:attr="hx-get=@{/buscar/{id}/resultados(id=${jobId})}"
+          hx-target="#leads-container" hx-swap="innerHTML" hx-trigger="change">
+        <label class="filtro-ordenar">Ordenar por
+            <select name="ordenar">
+                <option value="SCORE">Score (maior)</option>
+                <option value="NOTA">Nota (menor primeiro)</option>
+                <option value="SEGUIDORES">Seguidores (menos)</option>
+                <option value="NOME">Nome (A–Z)</option>
+            </select>
+        </label>
+        <label class="check"><input type="checkbox" name="semSite" value="true"> Sem site</label>
+        <label class="check"><input type="checkbox" name="notaBaixa" value="true"> Nota &lt; 4</label>
+        <label class="check"><input type="checkbox" name="poucosSeguidores" value="true"> &lt; 500 seg.</label>
+        <label class="check"><input type="checkbox" name="procon" value="true"> No Procon</label>
+    </form>
+
+    <div id="leads-container">
+        <div th:replace="~{fragments/resultados :: leads}"></div>
+    </div>
+</div>
+
+<!-- Lista de leads (re-renderizada pelos filtros) -->
+<div th:fragment="leads">
+    <p class="contagem"><strong th:text="${#lists.size(leads)}">0</strong> empresas</p>
+
+    <p class="vazio" th:if="${#lists.isEmpty(leads)}">Nenhuma empresa corresponde aos filtros.</p>
+
+    <ul class="lista-leads" th:unless="${#lists.isEmpty(leads)}">
+        <li class="lead clicavel" th:each="lead : ${leads}"
+            th:attr="hx-get=@{/empresa/{id}(id=${lead.id()})}"
+            hx-target="#modal-container" hx-swap="innerHTML" title="Ver detalhes">
+            <div class="lead-info">
+                <h3 th:text="${lead.nome()}">Nome</h3>
+                <p class="cidade" th:text="${lead.cidade()}">Cidade</p>
+                <div class="sinais">
+                    <span class="tag" th:classappend="${lead.notaGoogle() < 4.0} ? ' alerta' : ' ok'">
+                        ★ <span th:text="${lead.notaGoogle()}">0</span>
+                    </span>
+                    <span class="tag" th:classappend="${lead.temSite()} ? ' ok' : ' alerta'"
+                          th:text="${lead.temSite()} ? 'Tem site' : 'Sem site'">site</span>
+                    <span class="tag alerta" th:if="${lead.siteLento()}">Site lento</span>
+                    <span class="tag" th:classappend="${lead.seguidores() < 500} ? ' alerta' : ' ok'">
+                        <span th:text="${lead.seguidores()}">0</span> seguidores
+                    </span>
+                    <span class="tag perigo" th:if="${lead.proconEviteSite()}">⚠ Procon: Evite Sites</span>
+                </div>
+            </div>
+            <div class="lead-score">
+                <span class="score-num" th:text="${lead.score()}">0</span>
+                <span class="score-label">score</span>
+            </div>
+        </li>
+    </ul>
+</div>
+
+<!-- Fragmento de erro (validação / falha) -->
+<div th:fragment="erro" class="erro-box">
+    <p th:each="msg : ${mensagens}" th:text="${msg}">Mensagem de erro</p>
+</div>
+
+</body>
+</html>
