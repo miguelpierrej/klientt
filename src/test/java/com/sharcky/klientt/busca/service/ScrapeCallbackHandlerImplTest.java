@@ -28,7 +28,7 @@ class ScrapeCallbackHandlerImplTest {
         handler.tratar(callback("5", EstadoScrape.CONCLUIDO, empresas));
 
         verify(ingestaoService).ingerir(empresas, 5L);
-        verify(jobService).concluir(5L);
+        verify(jobService).marcarFonteConcluida(5L);
         verify(jobService, never()).marcarErro(any());
     }
 

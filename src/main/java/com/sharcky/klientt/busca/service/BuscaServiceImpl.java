@@ -43,6 +43,7 @@ public class BuscaServiceImpl implements BuscaService {
     private final JobService jobService;
     private final QuotaService quotaService;
     private final ScraperClient scraperClient;
+    private final FonteCnpjExecutor fonteCnpjExecutor;
     private final ScraperProperties properties;
     private final JobResultadoRepository jobResultadoRepository;
     private final EmpresaRepository empresaRepository;
@@ -51,12 +52,14 @@ public class BuscaServiceImpl implements BuscaService {
     private final LeadDetalheMapper detalheMapper;
 
     public BuscaServiceImpl(JobService jobService, QuotaService quotaService, ScraperClient scraperClient,
-                            ScraperProperties properties, JobResultadoRepository jobResultadoRepository,
+                            FonteCnpjExecutor fonteCnpjExecutor, ScraperProperties properties,
+                            JobResultadoRepository jobResultadoRepository,
                             EmpresaRepository empresaRepository, AvaliadorLead avaliador,
                             LeadMapper leadMapper, LeadDetalheMapper detalheMapper) {
         this.jobService = jobService;
         this.quotaService = quotaService;
         this.scraperClient = scraperClient;
+        this.fonteCnpjExecutor = fonteCnpjExecutor;
         this.properties = properties;
         this.jobResultadoRepository = jobResultadoRepository;
         this.empresaRepository = empresaRepository;
@@ -68,16 +71,20 @@ public class BuscaServiceImpl implements BuscaService {
     @Override
     public Long iniciar(BuscaRequest request, Long utilizadorId) {
         quotaService.garantirDisponibilidade(utilizadorId);
-        // criar() é transacional e faz commit antes de dispararmos o scraper — assim o
-        // callback assíncrono encontra sempre o job já persistido.
+        // criar() é transacional e faz commit antes de dispararmos as fontes — assim o callback
+        // assíncrono do scraper e a fonte CNPJ encontram sempre o job já persistido.
         Long jobId = jobService.criar(request, utilizadorId);
+        // Duas fontes em paralelo: scraper (Maps, assíncrono via callback) + CNPJ-por-CNAE (assíncrono).
         dispararScraper(jobId, request);
+        fonteCnpjExecutor.executar(jobId, request.termo(), request.regiao(), properties.getLimiteDefault());
         return jobId;
     }
 
     private void dispararScraper(Long jobId, BuscaRequest request) {
+        // cnae=null: a resolução nicho→CNAE corre de forma assíncrona na FonteCnpj; o scraper
+        // (Maps) ignora o campo. Fica plumbado no contrato para uso futuro.
         ScrapeRequest scrapeRequest = new ScrapeRequest(
-                String.valueOf(jobId), request.tipo(), request.termo(), request.regiao(),
+                String.valueOf(jobId), request.tipo(), request.termo(), request.regiao(), null,
                 properties.getLimiteDefault(), properties.getTamanhoLote(), properties.isColetarEmails(),
                 properties.isVerificarSmtp(), properties.callbackUrl());
         try {

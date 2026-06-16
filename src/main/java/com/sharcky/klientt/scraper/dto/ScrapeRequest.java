@@ -10,7 +10,11 @@ public record ScrapeRequest(
         TipoBusca tipo,
         String termo,
         String regiao,
+        String cnae,
         int limite,
+        int tamanhoLote,
+        boolean coletarEmails,
+        boolean verificarSmtp,
         String callbackUrl
 ) {
 }

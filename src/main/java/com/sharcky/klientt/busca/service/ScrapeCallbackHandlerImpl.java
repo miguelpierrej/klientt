@@ -46,7 +46,8 @@ public class ScrapeCallbackHandlerImpl implements ScrapeCallbackHandler {
         ingestaoService.ingerir(empresas, jobId);
 
         if (jobId != null && callback.estado() == EstadoScrape.CONCLUIDO) {
-            jobService.concluir(jobId);
+            // Dual-fonte: o scraper é uma das fontes; o job só conclui quando todas reportarem.
+            jobService.marcarFonteConcluida(jobId);
         }
         log.info("Callback {} buscaId={}: {} empresas", callback.estado(), callback.buscaId(), empresas.size());
     }

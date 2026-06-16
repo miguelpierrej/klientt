@@ -34,6 +34,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -43,6 +44,7 @@ class BuscaServiceImplTest {
     @Mock JobService jobService;
     @Mock QuotaService quotaService;
     @Mock ScraperClient scraperClient;
+    @Mock FonteCnpjExecutor fonteCnpjExecutor;
     @Mock ScraperProperties properties;
     @Mock JobResultadoRepository jobResultadoRepository;
     @Mock EmpresaRepository empresaRepository;
@@ -68,6 +70,7 @@ class BuscaServiceImplTest {
         inOrder.verify(quotaService).garantirDisponibilidade(1L);
         inOrder.verify(jobService).criar(request, 1L);
         inOrder.verify(scraperClient).iniciarBusca(any());
+        verify(fonteCnpjExecutor).executar(7L, "bares", "Lisboa", 50);   // 2ª fonte em paralelo
     }
 
     @Test
@@ -79,6 +82,7 @@ class BuscaServiceImplTest {
 
         verify(jobService, never()).criar(any(), any());
         verify(scraperClient, never()).iniciarBusca(any());
+        verify(fonteCnpjExecutor, never()).executar(any(), any(), any(), anyInt());
     }
 
     @Test
