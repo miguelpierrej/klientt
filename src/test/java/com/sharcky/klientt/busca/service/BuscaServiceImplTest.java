@@ -74,6 +74,23 @@ class BuscaServiceImplTest {
     }
 
     @Test
+    void scraperEmFalhaNaoMataOJobEDeixaFonteCnpjContinuar() {
+        when(properties.getLimiteDefault()).thenReturn(50);
+        when(properties.getTamanhoLote()).thenReturn(15);
+        when(properties.isColetarEmails()).thenReturn(true);
+        when(properties.callbackUrl()).thenReturn("http://cb");
+        when(jobService.criar(request, 1L)).thenReturn(7L);
+        doThrow(new RuntimeException("connection refused")).when(scraperClient).iniciarBusca(any());
+
+        Long jobId = buscaService.iniciar(request, 1L);
+
+        assertThat(jobId).isEqualTo(7L);
+        verify(jobService).marcarFonteConcluida(7L);                  // fonte scraper dada como concluída
+        verify(jobService, never()).marcarErro(any());                // não mata o job
+        verify(fonteCnpjExecutor).executar(7L, "bares", "Lisboa", 50); // 2ª fonte continua
+    }
+
+    @Test
     void iniciarComQuotaEsgotadaNaoCriaJob() {
         doThrow(new QuotaExcedidaException(20)).when(quotaService).garantirDisponibilidade(1L);
 

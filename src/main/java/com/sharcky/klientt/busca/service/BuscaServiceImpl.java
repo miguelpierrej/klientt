@@ -90,8 +90,11 @@ public class BuscaServiceImpl implements BuscaService {
         try {
             scraperClient.iniciarBusca(scrapeRequest);
         } catch (Exception ex) {
-            log.error("Falha ao iniciar scraper para jobId={}", jobId, ex);
-            jobService.marcarErro(jobId);
+            // Falha graciosa (dual-fonte, CONTRATO §7.1): o scraper em baixo não mata o job —
+            // marca-se esta fonte como concluída e a fonte CNPJ ainda pode completar a busca.
+            log.warn("Scraper indisponível para jobId={} ({}): a busca continua só com a fonte CNPJ",
+                    jobId, ex.getMessage());
+            jobService.marcarFonteConcluida(jobId);
         }
     }
 
