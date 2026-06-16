@@ -4,6 +4,7 @@ import com.sharcky.klientt.scraper.config.ScraperProperties;
 import com.sharcky.klientt.scraper.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.http.MediaType;
@@ -32,7 +33,7 @@ public class StubScraperClient implements ScraperClient {
     private final RestClient restClient;
 
     public StubScraperClient(ScraperProperties properties,
-                             TaskExecutor taskExecutor,
+                             @Qualifier("applicationTaskExecutor") TaskExecutor taskExecutor,
                              RestClient.Builder builder) {
         this.properties = properties;
         this.taskExecutor = taskExecutor;
