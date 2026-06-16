@@ -20,6 +20,16 @@ public interface ScrapeMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "atualizadoEm", ignore = true)
+    @Mapping(target = "razaoSocial", source = "cadastrais.razaoSocial")
+    @Mapping(target = "nomeFantasia", source = "cadastrais.nomeFantasia")
+    @Mapping(target = "situacaoCadastral", source = "cadastrais.situacaoCadastral")
+    @Mapping(target = "dataAbertura", source = "cadastrais.dataAbertura")
+    @Mapping(target = "capitalSocial", source = "cadastrais.capitalSocial")
+    @Mapping(target = "porte", source = "cadastrais.porte")
+    @Mapping(target = "naturezaJuridica", source = "cadastrais.naturezaJuridica")
+    @Mapping(target = "cnaePrincipal", source = "cadastrais.cnaePrincipal")
+    @Mapping(target = "optanteSimples", source = "cadastrais.optanteSimples")
+    @Mapping(target = "optanteMei", source = "cadastrais.optanteMei")
     Empresa toEmpresa(EmpresaPayload payload);
 
     @Mapping(target = "id", ignore = true)

@@ -32,6 +32,15 @@ public class Utilizador {
     @JoinColumn(name = "plano_id")
     private Plano plano;
 
+    @Column(name = "stripe_customer_id", length = 64)
+    private String stripeCustomerId;
+
+    @Column(name = "stripe_subscription_id", length = 64)
+    private String stripeSubscriptionId;
+
+    @Column(name = "subscription_status", length = 40)
+    private String subscriptionStatus;
+
     @Column(name = "criado_em", nullable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();
 }
