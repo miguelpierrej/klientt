@@ -1,11 +1,6 @@
 package com.sharcky.klientt.busca.service;
 
 import com.sharcky.klientt.busca.job.JobService;
-import com.sharcky.klientt.busca.mapper.ScrapeMapper;
-import com.sharcky.klientt.busca.scoring.AvaliacaoLead;
-import com.sharcky.klientt.busca.scoring.AvaliadorLead;
-import com.sharcky.klientt.empresa.model.Empresa;
-import com.sharcky.klientt.empresa.service.EmpresaCacheService;
 import com.sharcky.klientt.scraper.dto.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,51 +11,54 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ScrapeCallbackHandlerImplTest {
 
-    @Mock EmpresaCacheService cacheService;
-    @Mock ScrapeMapper scrapeMapper;
-    @Mock AvaliadorLead avaliador;
+    @Mock IngestaoService ingestaoService;
     @Mock JobService jobService;
     @InjectMocks ScrapeCallbackHandlerImpl handler;
 
     @Test
-    void concluidoArmazenaPontuaLigaEConclui() {
-        Empresa persistida = new Empresa();
-        persistida.setId(100L);
-        when(scrapeMapper.toEmpresa(any())).thenReturn(new Empresa());
-        when(cacheService.upsert(any())).thenReturn(persistida);
-        when(avaliador.avaliar(persistida)).thenReturn(new AvaliacaoLead(3.0, false, false, 0, false, 60));
+    void concluidoIngereEConclui() {
+        List<EmpresaPayload> empresas = umaEmpresa();
 
-        handler.tratar(callback("5", EstadoScrape.CONCLUIDO, umaEmpresa()));
+        handler.tratar(callback("5", EstadoScrape.CONCLUIDO, empresas));
 
-        verify(cacheService).upsert(any());
-        verify(jobService).registarResultado(5L, 100L, 60);
+        verify(ingestaoService).ingerir(empresas, 5L);
         verify(jobService).concluir(5L);
         verify(jobService, never()).marcarErro(any());
     }
 
     @Test
-    void erroMarcaJobComoErro() {
+    void erroMarcaJobComoErroSemIngerir() {
         handler.tratar(callback("5", EstadoScrape.ERRO, List.of()));
 
         verify(jobService).marcarErro(5L);
-        verify(cacheService, never()).upsert(any());
+        verify(ingestaoService, never()).ingerir(any(), any());
         verify(jobService, never()).concluir(any());
     }
 
     @Test
-    void buscaIdNaoNumericoArmazenaMasNaoLigaAoJob() {
-        when(scrapeMapper.toEmpresa(any())).thenReturn(new Empresa());
-        when(cacheService.upsert(any())).thenReturn(new Empresa());
+    void parcialIngereSemConcluir() {
+        List<EmpresaPayload> empresas = umaEmpresa();
 
-        handler.tratar(callback("nao-numerico", EstadoScrape.CONCLUIDO, umaEmpresa()));
+        handler.tratar(callback("5", EstadoScrape.PARCIAL, empresas));
 
-        verify(cacheService).upsert(any());
-        verify(jobService, never()).registarResultado(any(), any(), anyInt());
+        verify(ingestaoService).ingerir(empresas, 5L);
+        verify(jobService, never()).concluir(any());
+        verify(jobService, never()).marcarErro(any());
+    }
+
+    @Test
+    void buscaIdNaoNumericoIngereSemLigarAoJob() {
+        List<EmpresaPayload> empresas = umaEmpresa();
+
+        handler.tratar(callback("nao-numerico", EstadoScrape.CONCLUIDO, empresas));
+
+        verify(ingestaoService).ingerir(eq(empresas), eq(null));
         verify(jobService, never()).concluir(any());
     }
 
@@ -70,6 +68,7 @@ class ScrapeCallbackHandlerImplTest {
 
     private List<EmpresaPayload> umaEmpresa() {
         SinaisPayload s = new SinaisPayload(null, null, false, null, null, null, null, false);
-        return List.of(new EmpresaPayload("Bar X", null, null, null, "Lisboa", null, null, null, "stub", s, List.of()));
+        return List.of(new EmpresaPayload("Bar X", null, null, "contato@barx.test", null,
+                "Lisboa", null, null, null, "stub", s, List.of(), null));
     }
 }
