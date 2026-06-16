@@ -84,7 +84,7 @@ public class StubScraperClient implements ScraperClient {
         SinaisPayload sinais = new SinaisPayload(
                 nota, null, temSite, velocidadeMs, temSite ? Boolean.TRUE : null, null, null, procon);
         RedePayload redePayload = new RedePayload(rede, "https://" + rede + ".com/exemplo", seguidores);
-        return new EmpresaPayload(nome, null, null, null, cidade, null, null, null,
-                "stub", sinais, List.of(redePayload));
+        return new EmpresaPayload(nome, null, null, "contato@exemplo.com", null, cidade, null, null, null,
+                "stub", sinais, List.of(redePayload), null);
     }
 }

@@ -44,4 +44,12 @@ public class JobBusca {
 
     @Column(name = "concluido_em")
     private LocalDateTime concluidoEm;
+
+    /** Nº de fontes assíncronas que têm de reportar antes de concluir (dual-fonte: scraper + CNPJ). */
+    @Column(name = "fontes_esperadas", nullable = false)
+    private int fontesEsperadas = 1;
+
+    /** Nº de fontes que já reportaram. */
+    @Column(name = "fontes_concluidas", nullable = false)
+    private int fontesConcluidas = 0;
 }

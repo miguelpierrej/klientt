@@ -9,6 +9,7 @@ public record AvaliacaoLead(
         boolean temSite,
         boolean siteLento,
         int seguidores,
+        boolean seguidoresConhecidos,
         boolean proconEviteSite,
         int score
 ) {

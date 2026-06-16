@@ -32,6 +32,18 @@ public class ScraperProperties {
     /** Limite de empresas por busca. */
     private int limiteDefault = 50;
 
+    /** Quantidade máxima de empresas enviada em cada callback. */
+    private int tamanhoLote = 15;
+
+    /** Se true, o scraper abre sites encontrados para tentar extrair emails públicos. */
+    private boolean coletarEmails = true;
+
+    /**
+     * Se true, o scraper tenta verificação SMTP por permutação (contato@, vendas@, …)
+     * como último recurso. Desligado por default: é agressivo e exige saída na porta 25.
+     */
+    private boolean verificarSmtp = false;
+
     public String callbackUrl() {
         return publicBaseUrl + callbackPath;
     }

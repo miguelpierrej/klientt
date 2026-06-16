@@ -9,6 +9,7 @@ public record EmpresaPayload(
         String nome,
         String cnpj,
         String telefone,
+        String email,
         String endereco,
         String cidade,
         String website,
@@ -16,6 +17,7 @@ public record EmpresaPayload(
         Double lng,
         String fonte,
         SinaisPayload sinais,
-        List<RedePayload> redes
+        List<RedePayload> redes,
+        CadastraisPayload cadastrais
 ) {
 }

@@ -27,6 +27,8 @@ public class JobServiceImpl implements JobService {
         job.setTermo(request.termo());
         job.setRegiao(request.regiao());
         job.setEstado(EstadoJob.A_PROCESSAR);
+        // Dual-fonte: o job espera duas fontes (scraper Maps + CNPJ-por-CNAE) antes de concluir.
+        job.setFontesEsperadas(2);
         return jobRepository.save(job).getId();
     }
 
@@ -46,10 +48,27 @@ public class JobServiceImpl implements JobService {
     @Override
     @Transactional
     public void concluir(Long jobId) {
+        jobRepository.findById(jobId).ifPresent(this::concluirJob);
+    }
+
+    @Override
+    @Transactional
+    public void marcarFonteConcluida(Long jobId) {
         jobRepository.findById(jobId).ifPresent(job -> {
-            job.setEstado(EstadoJob.CONCLUIDO);
-            job.setConcluidoEm(LocalDateTime.now());
+            // Só conta enquanto o job está a processar (ignora fontes a reportar após ERRO/CONCLUIDO).
+            if (job.getEstado() != EstadoJob.A_PROCESSAR) {
+                return;
+            }
+            job.setFontesConcluidas(job.getFontesConcluidas() + 1);
+            if (job.getFontesConcluidas() >= job.getFontesEsperadas()) {
+                concluirJob(job);
+            }
         });
+    }
+
+    private void concluirJob(JobBusca job) {
+        job.setEstado(EstadoJob.CONCLUIDO);
+        job.setConcluidoEm(LocalDateTime.now());
     }
 
     @Override

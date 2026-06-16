@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  Ícones SVG reutilizáveis. Usar com:  <svg th:replace="~{fragments/icones :: estrela}"></svg>
+  Herdam a cor do texto (fill="currentColor").
+-->
+<svg th:fragment="estrela" class="icone" viewBox="0 0 24 24" width="1em" height="1em"
+     fill="currentColor" aria-hidden="true">
+    <path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+</svg>
+
+<svg th:fragment="alerta" class="icone" viewBox="0 0 24 24" width="1em" height="1em"
+     fill="currentColor" aria-hidden="true">
+    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+</svg>
+
+<svg th:fragment="download" class="icone" viewBox="0 0 24 24" width="1em" height="1em"
+     fill="currentColor" aria-hidden="true">
+    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+</svg>
+
+<svg th:fragment="sucesso" class="icone-grande" viewBox="0 0 24 24" width="1.3em" height="1.3em"
+     fill="currentColor" aria-hidden="true">
+    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8z"/>
+</svg>
+</body>
+</html>

@@ -2,6 +2,7 @@ package com.sharcky.klientt.busca.service;
 
 import com.sharcky.klientt.busca.dto.BuscaRequest;
 import com.sharcky.klientt.busca.dto.FiltroBusca;
+import com.sharcky.klientt.busca.dto.LeadDetalhe;
 import com.sharcky.klientt.busca.dto.LeadResponse;
 import com.sharcky.klientt.busca.dto.ResultadoBusca;
 
@@ -20,4 +21,7 @@ public interface BuscaService {
 
     /** Leads de um job concluído, com filtros e ordenação aplicados. */
     List<LeadResponse> filtrar(Long jobId, Long utilizadorId, FiltroBusca filtro);
+
+    /** Leads completos (para exportação), com os mesmos filtros/ordenação. */
+    List<LeadDetalhe> exportar(Long jobId, Long utilizadorId, FiltroBusca filtro);
 }

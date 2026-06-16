@@ -21,6 +21,7 @@ public interface LeadMapper {
     @Mapping(target = "siteLento", source = "avaliacao.siteLento")
     @Mapping(target = "seguidores", source = "avaliacao.seguidores")
     @Mapping(target = "proconEviteSite", source = "avaliacao.proconEviteSite")
+    @Mapping(target = "contactavel", source = "empresa.contactavel")
     @Mapping(target = "score", source = "avaliacao.score")
     LeadResponse toResponse(Empresa empresa, AvaliacaoLead avaliacao);
 }

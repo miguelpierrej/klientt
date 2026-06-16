@@ -14,8 +14,9 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        // Páginas públicas + webhook do scraper (autenticado por token próprio).
-                        .requestMatchers("/login", "/registo", "/css/**", "/api/scraper/**").permitAll()
+                        // Páginas públicas + webhooks (autenticados por token/assinatura próprios).
+                        .requestMatchers("/login", "/registo", "/css/**", "/favicon.svg",
+                                "/api/scraper/**", "/api/stripe/**").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form
                         .loginPage("/login")
@@ -24,8 +25,8 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutSuccessUrl("/login?logout")
                         .permitAll())
-                // O webhook é chamado por um serviço externo (sem sessão) → isento de CSRF.
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/scraper/**"));
+                // Webhooks são chamados por serviços externos (sem sessão) → isentos de CSRF.
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/scraper/**", "/api/stripe/**"));
         return http.build();
     }
 

@@ -12,6 +12,9 @@ public interface EmpresaRepository extends JpaRepository<Empresa, Long> {
 
     List<Empresa> findByNomeContainingIgnoreCase(String nome);
 
-    /** Usado no upsert da ingestão (chave de cache: nome + cidade). */
+    /** Identidade primária no upsert (dual-fonte): CNPJ (só dígitos). */
+    Optional<Empresa> findFirstByCnpj(String cnpj);
+
+    /** Fallback do upsert quando não há CNPJ (chave de cache: nome + cidade). */
     Optional<Empresa> findFirstByNomeIgnoreCaseAndCidadeIgnoreCase(String nome, String cidade);
 }

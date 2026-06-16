@@ -7,7 +7,80 @@
      th:attr="hx-get=@{/buscar/{id}(id=${jobId})}"
      hx-trigger="every 1500ms"
      hx-swap="outerHTML">
-    <p class="loading-ativo">⏳ A procurar e enriquecer empresas… (atualiza automaticamente)</p>
+
+    <!-- hx-preserve: o htmx mantém este mesmo nó a cada poll, em vez de o recriar.
+         Sem isto o spinner/skeletons eram destruídos e refeitos a cada 1,5s (piscava). -->
+    <div id="busca-loader-box" hx-preserve="true">
+    <div class="busca-loader" role="status" aria-live="polite">
+        <div class="loader-spinner" aria-hidden="true"></div>
+        <div class="loader-corpo">
+            <p class="loader-titulo">A montar a sua lista de oportunidades…</p>
+            <ul class="loader-fases" id="loader-fases">
+                <li data-fase="0">A procurar empresas no Google Maps</li>
+                <li data-fase="1">A analisar sites, redes sociais e reputação</li>
+                <li data-fase="2">A calcular o score e a ordenar os melhores leads</li>
+            </ul>
+            <p class="loader-dica" id="loader-dica">Estamos a recolher tudo — isto costuma valer a espera.</p>
+        </div>
+    </div>
+
+    <!-- Esqueletos: dão "forma" ao que vem a caminho e matam a sensação de espera -->
+    <ul class="lista-leads skeletons" aria-hidden="true">
+        <li class="lead skeleton" th:each="i : ${#numbers.sequence(1, 4)}">
+            <div class="lead-info skel-info">
+                <div class="skel skel-titulo"></div>
+                <div class="skel skel-sub"></div>
+                <div class="sinais">
+                    <span class="skel skel-tag"></span>
+                    <span class="skel skel-tag"></span>
+                    <span class="skel skel-tag"></span>
+                </div>
+            </div>
+            <div class="lead-score">
+                <div class="skel skel-score"></div>
+            </div>
+        </li>
+    </ul>
+    </div>
+
+    <script>
+        // Faz avançar as fases e roda as dicas a partir do tempo decorrido. Como o
+        // tempo vive em window.buscaInicio (reposto a cada nova busca no formulário),
+        // a progressão mantém-se contínua apesar do fragmento ser re-renderizado a
+        // cada poll. Não mostramos segundos de propósito — a ideia é não prender ao relógio.
+        (function () {
+            if (!window.buscaInicio) { window.buscaInicio = Date.now(); }
+            var seg = (Date.now() - window.buscaInicio) / 1000;
+            var fase = seg < 4 ? 0 : (seg < 12 ? 1 : 2);
+            document.querySelectorAll('#loader-fases li').forEach(function (li) {
+                var f = parseInt(li.getAttribute('data-fase'), 10);
+                li.classList.toggle('ativa', f === fase);
+                li.classList.toggle('feita', f < fase);
+            });
+            var dicas = [
+                'Sabia que? Empresas sem site costumam ter o maior score de oportunidade.',
+                'A analisar a velocidade dos sites — sites lentos são um sinal forte.',
+                'A cruzar redes sociais e reputação para priorizar os melhores leads.',
+                'Quase lá — a ordenar tudo por score para si.'
+            ];
+            var dica = document.getElementById('loader-dica');
+            if (dica) { dica.textContent = dicas[Math.floor(seg / 4) % dicas.length]; }
+        })();
+    </script>
+</div>
+
+<!-- Resultados parciais: mostra o lote recebido e continua o polling.
+     A classe "streaming" desliga as animações de entrada (ver CSS) — sem isso a lista,
+     o cabeçalho e a contagem re-animavam a cada poll de 1,5s e o ecrã piscava. -->
+<div th:fragment="parcial" id="busca-poll" class="streaming"
+     th:attr="hx-get=@{/buscar/{id}(id=${jobId})}"
+     hx-trigger="every 1500ms"
+     hx-swap="outerHTML">
+    <div class="resultados-cabecalho">
+        <h2>Resultados para &laquo;<span th:text="${termo}">termo</span>&raquo;</h2>
+        <p class="loading-ativo">Processando mais empresas…</p>
+    </div>
+    <div th:replace="~{fragments/resultados :: leads}"></div>
 </div>
 
 <!-- Resultados (estado final): cabeçalho + barra de filtros + lista -->
@@ -32,6 +105,8 @@
         <label class="check"><input type="checkbox" name="notaBaixa" value="true"> Nota &lt; 4</label>
         <label class="check"><input type="checkbox" name="poucosSeguidores" value="true"> &lt; 500 seg.</label>
         <label class="check"><input type="checkbox" name="procon" value="true"> No Procon</label>
+        <button type="button" class="btn-export" th:attr="onclick=|exportarLeads(${jobId})|">
+            <svg th:replace="~{fragments/icones :: download}"></svg> Exportar CSV</button>
     </form>
 
     <div id="leads-container">
@@ -54,7 +129,7 @@
                 <p class="cidade" th:text="${lead.cidade()}">Cidade</p>
                 <div class="sinais">
                     <span class="tag" th:classappend="${lead.notaGoogle() < 4.0} ? ' alerta' : ' ok'">
-                        ★ <span th:text="${lead.notaGoogle()}">0</span>
+                        <svg th:replace="~{fragments/icones :: estrela}"></svg> <span th:text="${lead.notaGoogle()}">0</span>
                     </span>
                     <span class="tag" th:classappend="${lead.temSite()} ? ' ok' : ' alerta'"
                           th:text="${lead.temSite()} ? 'Tem site' : 'Sem site'">site</span>
@@ -62,7 +137,8 @@
                     <span class="tag" th:classappend="${lead.seguidores() < 500} ? ' alerta' : ' ok'">
                         <span th:text="${lead.seguidores()}">0</span> seguidores
                     </span>
-                    <span class="tag perigo" th:if="${lead.proconEviteSite()}">⚠ Procon: Evite Sites</span>
+                    <span class="tag perigo" th:if="${lead.proconEviteSite()}">
+                        <svg th:replace="~{fragments/icones :: alerta}"></svg> Procon: Evite Sites</span>
                 </div>
             </div>
             <div class="lead-score">

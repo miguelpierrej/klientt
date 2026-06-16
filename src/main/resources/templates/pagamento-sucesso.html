@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klientt — pagamento</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="topo">
+    <div class="container barra-topo">
+        <div><h1 class="logo">Klientt</h1></div>
+    </div>
+</header>
+
+<main class="container conta">
+    <h2><svg th:replace="~{fragments/icones :: sucesso}"></svg> Pagamento recebido</h2>
+    <p class="ajuda">
+        Obrigado! Assim que a Stripe confirmar a subscrição, o seu plano é atualizado
+        automaticamente (pode demorar alguns segundos).
+    </p>
+    <p>
+        <a class="btn" th:href="@{/conta}">Ver a minha conta</a>
+        <a class="btn-link" th:href="@{/}" style="color:var(--azul);border-color:var(--azul)">Buscar leads</a>
+    </p>
+</main>
+</body>
+</html>

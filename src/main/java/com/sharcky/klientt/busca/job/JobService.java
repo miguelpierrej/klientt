@@ -19,5 +19,11 @@ public interface JobService {
 
     void concluir(Long jobId);
 
+    /**
+     * Marca que uma das fontes (scraper ou CNPJ-por-CNAE) terminou. Quando todas as fontes
+     * esperadas reportarem, conclui o job. Dual-fonte (PLANO-DUAL-FONTE.md, Fase E).
+     */
+    void marcarFonteConcluida(Long jobId);
+
     void marcarErro(Long jobId);
 }

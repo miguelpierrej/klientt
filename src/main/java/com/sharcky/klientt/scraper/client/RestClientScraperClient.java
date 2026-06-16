@@ -5,8 +5,11 @@ import com.sharcky.klientt.scraper.dto.ScrapeAck;
 import com.sharcky.klientt.scraper.dto.ScrapeRequest;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+
+import java.net.http.HttpClient;
 
 /**
  * Implementação real: chama o scraper via HTTP (CONTRATO-SCRAPER.md §2).
@@ -21,7 +24,13 @@ public class RestClientScraperClient implements ScraperClient {
 
     public RestClientScraperClient(RestClient.Builder builder, ScraperProperties properties) {
         this.properties = properties;
-        this.restClient = builder.baseUrl(properties.getBaseUrl()).build();
+        HttpClient httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
+        this.restClient = builder
+                .requestFactory(new JdkClientHttpRequestFactory(httpClient))
+                .baseUrl(properties.getBaseUrl())
+                .build();
     }
 
     @Override

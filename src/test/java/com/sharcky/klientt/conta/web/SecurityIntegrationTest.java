@@ -9,6 +9,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.authenticated;
 import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.unauthenticated;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -32,6 +33,19 @@ class SecurityIntegrationTest {
     void paginaDeLoginEPublica() throws Exception {
         mvc.perform(get("/login"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void faviconEPublico() throws Exception {
+        mvc.perform(get("/favicon.svg"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/svg+xml"));
+    }
+
+    @Test
+    void rotaInexistenteRetorna404() throws Exception {
+        mvc.perform(get("/rota-inexistente").with(user("teste")))
+                .andExpect(status().isNotFound());
     }
 
     @Test

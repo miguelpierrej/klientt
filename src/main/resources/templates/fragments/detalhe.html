@@ -13,7 +13,9 @@
             <p class="modal-sub">
                 <span th:text="${lead.cidade()} ?: 'Cidade não informada'">cidade</span>
                 · score <strong th:text="${lead.score()}">0</strong>
-                <span class="tag perigo" th:if="${lead.proconEviteSite()}">⚠ Procon: Evite Sites</span>
+                <span class="tag ok" th:if="${lead.contactavel()}">Com contato</span>
+                <span class="tag perigo" th:if="${lead.proconEviteSite()}">
+                    <svg th:replace="~{fragments/icones :: alerta}"></svg> Procon: Evite Sites</span>
             </p>
         </header>
 
@@ -21,6 +23,12 @@
             <h3>Contacto</h3>
             <dl>
                 <dt>Telefone</dt><dd th:text="${lead.telefone()} ?: '—'">—</dd>
+                <dt>Email</dt>
+                <dd>
+                    <a th:if="${lead.email()}" th:href="'mailto:' + ${lead.email()}"
+                       th:text="${lead.email()}">email</a>
+                    <span th:unless="${lead.email()}">—</span>
+                </dd>
                 <dt>Morada</dt><dd th:text="${lead.endereco()} ?: '—'">—</dd>
                 <dt>CNPJ</dt><dd th:text="${lead.cnpj()} ?: '—'">—</dd>
                 <dt>Website</dt>
@@ -30,13 +38,54 @@
                     <span th:unless="${lead.website()}">—</span>
                 </dd>
             </dl>
+
+            <!-- Meios de contacto recolhidos (com origem) -->
+            <ul class="modal-contatos" th:unless="${#lists.isEmpty(lead.contatos())}">
+                <li th:each="c : ${lead.contatos()}">
+                    <span class="rede-nome" th:text="${c.tipo()}">tipo</span>
+                    <span th:text="${c.valor()}">valor</span>
+                    <span class="ajuda" th:if="${c.fonte()}" th:text="'(' + ${c.fonte()} + ')'">(fonte)</span>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Dados cadastrais (CNPJ/Receita) — só quando há dados consultados -->
+        <section class="modal-seccao" th:if="${lead.razaoSocial() != null}">
+            <h3>Dados cadastrais (CNPJ)</h3>
+            <dl>
+                <dt>Razão social</dt><dd th:text="${lead.razaoSocial()} ?: '—'">—</dd>
+                <dt>Nome fantasia</dt><dd th:text="${lead.nomeFantasia()} ?: '—'">—</dd>
+                <dt>Situação</dt>
+                <dd>
+                    <span th:text="${lead.situacaoCadastral()} ?: '—'"
+                          th:classappend="${lead.situacaoCadastral() != null and #strings.equalsIgnoreCase(lead.situacaoCadastral(), 'ATIVA')} ? 'tag ok' : (${lead.situacaoCadastral() != null} ? 'tag alerta' : '')">—</span>
+                </dd>
+                <dt>Abertura</dt><dd th:text="${lead.dataAbertura()} ?: '—'">—</dd>
+                <dt>Porte</dt><dd th:text="${lead.porte()} ?: '—'">—</dd>
+                <dt>Natureza jurídica</dt><dd th:text="${lead.naturezaJuridica()} ?: '—'">—</dd>
+                <dt>Atividade (CNAE)</dt><dd th:text="${lead.cnaePrincipal()} ?: '—'">—</dd>
+                <dt>Capital social</dt>
+                <dd th:text="${lead.capitalSocial() != null} ? 'R$ ' + ${#numbers.formatDecimal(lead.capitalSocial(), 1, 'POINT', 2, 'COMMA')} : '—'">—</dd>
+                <dt>Simples / MEI</dt>
+                <dd>
+                    <span th:if="${lead.optanteSimples()}" class="tag ok">Simples</span>
+                    <span th:if="${lead.optanteMei()}" class="tag ok">MEI</span>
+                    <span th:unless="${lead.optanteSimples() or lead.optanteMei()}">—</span>
+                </dd>
+            </dl>
         </section>
 
         <section class="modal-seccao">
             <h3>Sinais do site &amp; Google</h3>
             <dl>
                 <dt>Nota Google</dt>
-                <dd th:text="${lead.notaGoogle() != null ? lead.notaGoogle() + ' ★' : '—'}">—</dd>
+                <dd>
+                    <span th:if="${lead.notaGoogle() != null}">
+                        <span th:text="${lead.notaGoogle()}">0</span>
+                        <svg th:replace="~{fragments/icones :: estrela}"></svg>
+                    </span>
+                    <span th:unless="${lead.notaGoogle() != null}">—</span>
+                </dd>
                 <dt>Avaliações</dt><dd th:text="${lead.numReviews()} ?: '—'">—</dd>
                 <dt>Tem site</dt>
                 <dd th:text="${lead.siteExiste() == null ? '—' : (lead.siteExiste() ? 'Sim' : 'Não')}">—</dd>
