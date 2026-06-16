@@ -2,14 +2,18 @@ package com.sharcky.klientt.busca.service;
 
 import com.sharcky.klientt.busca.dto.BuscaRequest;
 import com.sharcky.klientt.busca.dto.FiltroBusca;
+import com.sharcky.klientt.busca.dto.LeadDetalhe;
 import com.sharcky.klientt.busca.dto.LeadResponse;
+import com.sharcky.klientt.busca.dto.OrdenarPor;
 import com.sharcky.klientt.busca.dto.ResultadoBusca;
 import com.sharcky.klientt.busca.job.EstadoJob;
 import com.sharcky.klientt.busca.job.JobBusca;
 import com.sharcky.klientt.busca.job.JobResultado;
 import com.sharcky.klientt.busca.job.JobResultadoRepository;
 import com.sharcky.klientt.busca.job.JobService;
+import com.sharcky.klientt.busca.mapper.LeadDetalheMapper;
 import com.sharcky.klientt.busca.mapper.LeadMapper;
+import com.sharcky.klientt.busca.scoring.AvaliacaoLead;
 import com.sharcky.klientt.busca.scoring.AvaliadorLead;
 import com.sharcky.klientt.conta.service.QuotaService;
 import com.sharcky.klientt.empresa.model.Empresa;
@@ -44,10 +48,12 @@ public class BuscaServiceImpl implements BuscaService {
     private final EmpresaRepository empresaRepository;
     private final AvaliadorLead avaliador;
     private final LeadMapper leadMapper;
+    private final LeadDetalheMapper detalheMapper;
 
     public BuscaServiceImpl(JobService jobService, QuotaService quotaService, ScraperClient scraperClient,
                             ScraperProperties properties, JobResultadoRepository jobResultadoRepository,
-                            EmpresaRepository empresaRepository, AvaliadorLead avaliador, LeadMapper leadMapper) {
+                            EmpresaRepository empresaRepository, AvaliadorLead avaliador,
+                            LeadMapper leadMapper, LeadDetalheMapper detalheMapper) {
         this.jobService = jobService;
         this.quotaService = quotaService;
         this.scraperClient = scraperClient;
@@ -56,6 +62,7 @@ public class BuscaServiceImpl implements BuscaService {
         this.empresaRepository = empresaRepository;
         this.avaliador = avaliador;
         this.leadMapper = leadMapper;
+        this.detalheMapper = detalheMapper;
     }
 
     @Override
@@ -71,7 +78,8 @@ public class BuscaServiceImpl implements BuscaService {
     private void dispararScraper(Long jobId, BuscaRequest request) {
         ScrapeRequest scrapeRequest = new ScrapeRequest(
                 String.valueOf(jobId), request.tipo(), request.termo(), request.regiao(),
-                properties.getLimiteDefault(), properties.callbackUrl());
+                properties.getLimiteDefault(), properties.getTamanhoLote(), properties.isColetarEmails(),
+                properties.isVerificarSmtp(), properties.callbackUrl());
         try {
             scraperClient.iniciarBusca(scrapeRequest);
         } catch (Exception ex) {
@@ -85,12 +93,13 @@ public class BuscaServiceImpl implements BuscaService {
     public ResultadoBusca consultar(Long jobId, Long utilizadorId) {
         JobBusca job = jobDoUtilizador(jobId, utilizadorId);
 
-        if (job.getEstado() != EstadoJob.CONCLUIDO) {
+        if (job.getEstado() == EstadoJob.ERRO) {
             return new ResultadoBusca(jobId, job.getTermo(), job.getEstado(), List.of(), null);
         }
 
-        List<LeadResponse> leads = leadsDoJob(jobId).stream()
-                .sorted(Comparator.comparingInt(LeadResponse::score).reversed())
+        List<LeadResponse> leads = avaliadosDoJob(jobId).stream()
+                .sorted(comparador(OrdenarPor.SCORE))
+                .map(la -> leadMapper.toResponse(la.empresa(), la.avaliacao()))
                 .toList();
 
         return new ResultadoBusca(jobId, job.getTermo(), job.getEstado(), leads, null);
@@ -99,26 +108,52 @@ public class BuscaServiceImpl implements BuscaService {
     @Override
     @Transactional(readOnly = true)
     public List<LeadResponse> filtrar(Long jobId, Long utilizadorId, FiltroBusca filtro) {
+        return aplicar(jobId, utilizadorId, filtro).stream()
+                .map(la -> leadMapper.toResponse(la.empresa(), la.avaliacao()))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LeadDetalhe> exportar(Long jobId, Long utilizadorId, FiltroBusca filtro) {
+        return aplicar(jobId, utilizadorId, filtro).stream()
+                .map(la -> detalheMapper.toDetalhe(la.empresa(), la.avaliacao()))
+                .toList();
+    }
+
+    /** Aplica filtros e ordenação aos leads de um job concluído (do utilizador). */
+    private List<LeadAvaliado> aplicar(Long jobId, Long utilizadorId, FiltroBusca filtro) {
         JobBusca job = jobDoUtilizador(jobId, utilizadorId);
         if (job.getEstado() != EstadoJob.CONCLUIDO) {
             return List.of();
         }
-        return leadsDoJob(jobId).stream()
-                .filter(l -> !filtro.semSite() || !l.temSite())
-                .filter(l -> !filtro.notaBaixa() || l.notaGoogle() < NOTA_BAIXA)
-                .filter(l -> !filtro.poucosSeguidores() || l.seguidores() < POUCOS_SEGUIDORES)
-                .filter(l -> !filtro.procon() || l.proconEviteSite())
+        return avaliadosDoJob(jobId).stream()
+                .filter(la -> !filtro.semSite() || !la.avaliacao().temSite())
+                .filter(la -> !filtro.notaBaixa() || la.avaliacao().notaGoogle() < NOTA_BAIXA)
+                .filter(la -> !filtro.poucosSeguidores()
+                        || (la.avaliacao().seguidoresConhecidos() && la.avaliacao().seguidores() < POUCOS_SEGUIDORES))
+                .filter(la -> !filtro.procon() || la.avaliacao().proconEviteSite())
+                .filter(la -> !filtro.comContato() || la.empresa().isContactavel())
                 .sorted(comparador(filtro.ordenarOuPadrao()))
                 .toList();
     }
 
-    private Comparator<LeadResponse> comparador(com.sharcky.klientt.busca.dto.OrdenarPor ordenar) {
+    private Comparator<LeadAvaliado> comparador(OrdenarPor ordenar) {
         return switch (ordenar) {
-            case SCORE -> Comparator.comparingInt(LeadResponse::score).reversed();
-            case NOTA -> Comparator.comparingDouble(LeadResponse::notaGoogle);
-            case SEGUIDORES -> Comparator.comparingInt(LeadResponse::seguidores);
-            case NOME -> Comparator.comparing(LeadResponse::nome, String.CASE_INSENSITIVE_ORDER);
+            case SCORE -> Comparator.comparingInt((LeadAvaliado la) -> la.avaliacao().score()).reversed();
+            case NOTA -> Comparator.comparingDouble(la -> la.avaliacao().notaGoogle());
+            case SEGUIDORES -> Comparator.comparingInt(la -> la.avaliacao().seguidores());
+            case NOME -> Comparator.comparing(la -> la.empresa().getNome(), String.CASE_INSENSITIVE_ORDER);
         };
+    }
+
+    private List<LeadAvaliado> avaliadosDoJob(Long jobId) {
+        List<Long> empresaIds = jobResultadoRepository.findByJobId(jobId).stream()
+                .map(JobResultado::getEmpresaId)
+                .toList();
+        return empresaRepository.findAllById(empresaIds).stream()
+                .map(e -> new LeadAvaliado(e, avaliador.avaliar(e)))
+                .toList();
     }
 
     /** Job do utilizador ou exceção (não revela jobs de outros). */
@@ -128,16 +163,7 @@ public class BuscaServiceImpl implements BuscaService {
                 .orElseThrow(() -> new BuscaNaoEncontradaException(jobId));
     }
 
-    private List<LeadResponse> leadsDoJob(Long jobId) {
-        List<Long> empresaIds = jobResultadoRepository.findByJobId(jobId).stream()
-                .map(JobResultado::getEmpresaId)
-                .toList();
-        return empresaRepository.findAllById(empresaIds).stream()
-                .map(this::avaliarEMapear)
-                .toList();
-    }
-
-    private LeadResponse avaliarEMapear(Empresa empresa) {
-        return leadMapper.toResponse(empresa, avaliador.avaliar(empresa));
+    /** Par empresa + avaliação, reutilizado para lista, filtro e exportação. */
+    private record LeadAvaliado(Empresa empresa, AvaliacaoLead avaliacao) {
     }
 }

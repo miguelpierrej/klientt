@@ -9,7 +9,8 @@ public record FiltroBusca(
         boolean semSite,
         boolean notaBaixa,
         boolean poucosSeguidores,
-        boolean procon
+        boolean procon,
+        boolean comContato
 ) {
     public OrdenarPor ordenarOuPadrao() {
         return ordenar != null ? ordenar : OrdenarPor.SCORE;

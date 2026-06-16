@@ -76,6 +76,12 @@ public class BuscaController {
             model.addAttribute("jobId", jobId);
             return "fragments/resultados :: lista";
         }
+        if (!resultado.leads().isEmpty()) {
+            model.addAttribute("leads", resultado.leads());
+            model.addAttribute("termo", resultado.termo());
+            model.addAttribute("jobId", jobId);
+            return "fragments/resultados :: parcial";
+        }
         model.addAttribute("jobId", jobId);
         return "fragments/resultados :: aguardar";
     }
@@ -90,9 +96,10 @@ public class BuscaController {
                           @RequestParam(defaultValue = "false") boolean notaBaixa,
                           @RequestParam(defaultValue = "false") boolean poucosSeguidores,
                           @RequestParam(defaultValue = "false") boolean procon,
+                          @RequestParam(defaultValue = "false") boolean comContato,
                           @AuthenticationPrincipal KlienttUserDetails utilizador,
                           Model model) {
-        FiltroBusca filtro = new FiltroBusca(ordenar, semSite, notaBaixa, poucosSeguidores, procon);
+        FiltroBusca filtro = new FiltroBusca(ordenar, semSite, notaBaixa, poucosSeguidores, procon, comContato);
         model.addAttribute("leads", buscaService.filtrar(jobId, utilizador.getId(), filtro));
         return "fragments/resultados :: leads";
     }

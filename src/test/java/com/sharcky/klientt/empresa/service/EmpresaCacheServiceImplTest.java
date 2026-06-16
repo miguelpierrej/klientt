@@ -1,5 +1,6 @@
 package com.sharcky.klientt.empresa.service;
 
+import com.sharcky.klientt.empresa.model.Contato;
 import com.sharcky.klientt.empresa.model.Empresa;
 import com.sharcky.klientt.empresa.model.EmpresaRede;
 import com.sharcky.klientt.empresa.model.Sinais;
@@ -138,6 +139,47 @@ class EmpresaCacheServiceImplTest {
         assertThat(fundida.getRedes()).hasSize(2);
         assertThat(fundida.getRedes()).extracting(EmpresaRede::getRede)
                 .containsExactlyInAnyOrder("instagram", "facebook");
+    }
+
+    @Test
+    void empresaNovaGeraContatosDeTelefoneEEmail() {
+        when(repository.findFirstByNomeIgnoreCaseAndCidadeIgnoreCase(any(), any())).thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Empresa fresca = empresa("Bar X", "Lisboa");
+        fresca.setTelefone("+351910000000");
+        fresca.setEmail("contato@barx.test");
+        fresca.setFonte("google_maps");
+
+        Empresa salva = cache.upsert(fresca);
+
+        assertThat(salva.getContatos()).extracting(Contato::getTipo)
+                .containsExactlyInAnyOrder("telefone", "email");
+        assertThat(salva.getContatos()).allSatisfy(c -> assertThat(c.getFonte()).isEqualTo("google_maps"));
+        assertThat(salva.isContactavel()).isTrue();
+    }
+
+    @Test
+    void contatosFazemUniaoSemDuplicarEntreFontes() {
+        Empresa existente = empresa("Bar X", "Lisboa");      // já tinha telefone (Maps)
+        existente.setFonte("google_maps");
+        Contato tel = new Contato();
+        tel.setTipo("telefone");
+        tel.setValor("+351910000000");
+        existente.adicionarContato(tel);
+        when(repository.findFirstByNomeIgnoreCaseAndCidadeIgnoreCase("Bar X", "Lisboa"))
+                .thenReturn(Optional.of(existente));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Empresa daReceita = empresa("Bar X", "Lisboa");      // mesmo telefone + email novo
+        daReceita.setTelefone("+351910000000");
+        daReceita.setEmail("contato@barx.test");
+        daReceita.setFonte("receita");
+
+        Empresa fundida = cache.upsert(daReceita);
+
+        assertThat(fundida.getContatos()).extracting(Contato::getTipo)
+                .containsExactlyInAnyOrder("telefone", "email");   // telefone não duplicou
     }
 
     private Empresa empresa(String nome, String cidade) {

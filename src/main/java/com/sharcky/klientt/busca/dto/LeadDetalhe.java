@@ -1,6 +1,7 @@
 package com.sharcky.klientt.busca.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -13,9 +14,12 @@ public record LeadDetalhe(
         String cidade,
         String cnpj,
         String telefone,
+        String email,
         String endereco,
         String website,
         String fonte,
+        boolean contactavel,
+        List<ContatoView> contatos,
         LocalDateTime atualizadoEm,
         int score,
         // sinais
@@ -27,6 +31,17 @@ public record LeadDetalhe(
         Integer siteNumPaginas,
         String siteReputacao,
         boolean proconEviteSite,
-        List<RedeView> redes
+        List<RedeView> redes,
+        // dados cadastrais (CNPJ)
+        String razaoSocial,
+        String nomeFantasia,
+        String situacaoCadastral,
+        LocalDate dataAbertura,
+        BigDecimal capitalSocial,
+        String porte,
+        String naturezaJuridica,
+        String cnaePrincipal,
+        Boolean optanteSimples,
+        Boolean optanteMei
 ) {
 }

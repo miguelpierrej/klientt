@@ -13,6 +13,7 @@ public record LeadResponse(
         boolean siteLento,
         int seguidores,
         boolean proconEviteSite,
+        boolean contactavel,
         int score
 ) {
 }
