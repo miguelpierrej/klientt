@@ -45,20 +45,51 @@ public class ApiGeridaCnpjFonte implements FonteCnpj {
 
     @Override
     public List<EmpresaPayload> buscarPorCnae(String cnae, String municipio, int limite) {
-        if (!properties.isConfigurado()) {
-            log.debug("FonteCnpj desligada (klientt.cnpj.enabled=false) — busca por CNAE ignorada");
-            return List.of();
-        }
         String codigo = soDigitos(cnae);
         if (codigo == null) {
             return List.of();
         }
+        Map<String, Object> filtros = new LinkedHashMap<>();
+        filtros.put("codigo_atividade_principal", List.of(codigo));
+        return pesquisar(filtros, municipio, limite, "cnae=" + cnae);
+    }
+
+    @Override
+    public List<EmpresaPayload> buscarPorNome(String nome, String municipio, int limite) {
+        if (!temTexto(nome)) {
+            return List.of();
+        }
+        Map<String, Object> textual = new LinkedHashMap<>();
+        textual.put("texto", List.of(nome.trim()));   // texto é array de strings
+        textual.put("tipo_busca", "radical");
+        textual.put("razao_social", true);
+        textual.put("nome_fantasia", true);
+        Map<String, Object> filtros = new LinkedHashMap<>();
+        filtros.put("busca_textual", List.of(textual));
+        return pesquisar(filtros, municipio, limite, "nome=" + nome);
+    }
+
+    /** Executa a pesquisa avançada (POST /v5/cnpj/pesquisa) com os filtros dados + comuns. */
+    private List<EmpresaPayload> pesquisar(Map<String, Object> filtros, String municipio, int limite, String desc) {
+        if (!properties.isConfigurado()) {
+            log.debug("FonteCnpj desligada (klientt.cnpj.enabled=false) — busca ignorada");
+            return List.of();
+        }
         try {
+            Map<String, Object> corpo = new LinkedHashMap<>(filtros);
+            String mun = normalizar(municipio);
+            if (mun != null) {
+                corpo.put("municipio", List.of(mun));
+            }
+            corpo.put("situacao_cadastral", List.of("ATIVA"));
+            corpo.put("limite", Math.max(1, Math.min(limite, LIMITE_MAX)));
+            corpo.put("pagina", 1);
+
             RespostaCnpj resposta = restClient.post()
                     .uri(uri -> uri.path("/v5/cnpj/pesquisa").queryParam("tipo_resultado", "completo").build())
                     .header("api-key", properties.getApiKey())
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(corpo(codigo, municipio, limite))
+                    .body(corpo)
                     .retrieve()
                     .body(RespostaCnpj.class);
 
@@ -67,23 +98,9 @@ public class ApiGeridaCnpjFonte implements FonteCnpj {
             }
             return resposta.cnpjs().stream().map(this::toPayload).toList();
         } catch (Exception ex) {
-            log.warn("Falha na busca CNPJ por CNAE (cnae={}, municipio={}): {}", cnae, municipio, ex.getMessage());
+            log.warn("Falha na busca CNPJ ({}): {}", desc, ex.getMessage());
             return List.of();
         }
-    }
-
-    /** Corpo do POST (chaves snake_case exigidas pela Casa dos Dados). */
-    private Map<String, Object> corpo(String cnaeDigitos, String municipio, int limite) {
-        Map<String, Object> corpo = new LinkedHashMap<>();
-        corpo.put("codigo_atividade_principal", List.of(cnaeDigitos));
-        String mun = normalizar(municipio);
-        if (mun != null) {
-            corpo.put("municipio", List.of(mun));
-        }
-        corpo.put("situacao_cadastral", List.of("ATIVA"));
-        corpo.put("limite", Math.max(1, Math.min(limite, LIMITE_MAX)));
-        corpo.put("pagina", 1);
-        return corpo;
     }
 
     private EmpresaPayload toPayload(EmpresaCnpj e) {

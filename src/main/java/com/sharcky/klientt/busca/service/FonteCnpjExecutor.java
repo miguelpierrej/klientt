@@ -1,5 +1,6 @@
 package com.sharcky.klientt.busca.service;
 
+import com.sharcky.klientt.busca.dto.TipoBusca;
 import com.sharcky.klientt.busca.job.JobService;
 import com.sharcky.klientt.cnae.Cnae;
 import com.sharcky.klientt.cnae.ResolvedorCnae;
@@ -40,16 +41,20 @@ public class FonteCnpjExecutor {
     }
 
     @Async
-    public void executar(Long jobId, String termo, String regiao) {
-        // A fonte CNPJ usa o seu próprio limite (klientt.cnpj.limite-default) — controla o saldo
-        // consumido por busca, independente do limite do scraper.
+    public void executar(Long jobId, TipoBusca tipo, String termo, String regiao) {
+        // A fonte CNPJ usa o seu próprio limite (klientt.cnpj.limite-default) p/ controlar o saldo.
         int limite = properties.getLimiteDefault();
         try {
-            for (Cnae cnae : resolvedorCnae.resolver(termo)) {
-                ingestaoService.ingerir(fonteCnpj.buscarPorCnae(cnae.codigo(), regiao, limite), jobId);
+            if (tipo == TipoBusca.NOME) {
+                ingestaoService.ingerir(fonteCnpj.buscarPorNome(termo, regiao, limite), jobId);
+            } else {
+                // NICHO: resolve termo → CNAE(s) e busca cada um.
+                for (Cnae cnae : resolvedorCnae.resolver(termo)) {
+                    ingestaoService.ingerir(fonteCnpj.buscarPorCnae(cnae.codigo(), regiao, limite), jobId);
+                }
             }
         } catch (Exception ex) {
-            log.warn("Falha na fonte CNPJ para jobId={} (termo='{}'): {}", jobId, termo, ex.getMessage());
+            log.warn("Falha na fonte CNPJ para jobId={} (tipo={}, termo='{}'): {}", jobId, tipo, termo, ex.getMessage());
         } finally {
             jobService.marcarFonteConcluida(jobId);
         }

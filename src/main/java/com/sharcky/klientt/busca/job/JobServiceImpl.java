@@ -27,8 +27,8 @@ public class JobServiceImpl implements JobService {
         job.setTermo(request.termo());
         job.setRegiao(request.regiao());
         job.setEstado(EstadoJob.A_PROCESSAR);
-        // Dual-fonte: o job espera duas fontes (scraper Maps + CNPJ-por-CNAE) antes de concluir.
-        job.setFontesEsperadas(2);
+        // Fonte primária única (Casa dos Dados); o enriquecimento Maps (Fase 2) será contado à parte.
+        job.setFontesEsperadas(1);
         return jobRepository.save(job).getId();
     }
 

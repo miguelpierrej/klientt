@@ -21,8 +21,6 @@ import com.sharcky.klientt.empresa.model.Empresa;
 import com.sharcky.klientt.empresa.repository.EmpresaRepository;
 
 import java.util.List;
-import com.sharcky.klientt.scraper.client.ScraperClient;
-import com.sharcky.klientt.scraper.config.ScraperProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -42,9 +40,7 @@ class BuscaServiceImplTest {
 
     @Mock JobService jobService;
     @Mock QuotaService quotaService;
-    @Mock ScraperClient scraperClient;
     @Mock FonteCnpjExecutor fonteCnpjExecutor;
-    @Mock ScraperProperties properties;
     @Mock JobResultadoRepository jobResultadoRepository;
     @Mock EmpresaRepository empresaRepository;
     @Mock AvaliadorLead avaliador;
@@ -55,38 +51,16 @@ class BuscaServiceImplTest {
     private final BuscaRequest request = new BuscaRequest(TipoBusca.NICHO, "bares", "Lisboa");
 
     @Test
-    void iniciarValidaQuotaCriaJobEDisparaScraper() {
-        when(properties.getLimiteDefault()).thenReturn(50);
-        when(properties.getTamanhoLote()).thenReturn(15);
-        when(properties.isColetarEmails()).thenReturn(true);
-        when(properties.callbackUrl()).thenReturn("http://cb");
+    void iniciarValidaQuotaCriaJobEDisparaFonteCnpj() {
         when(jobService.criar(request, 1L)).thenReturn(7L);
 
         Long jobId = buscaService.iniciar(request, 1L);
 
         assertThat(jobId).isEqualTo(7L);
-        InOrder inOrder = inOrder(quotaService, jobService, scraperClient);
+        InOrder inOrder = inOrder(quotaService, jobService, fonteCnpjExecutor);
         inOrder.verify(quotaService).garantirDisponibilidade(1L);
         inOrder.verify(jobService).criar(request, 1L);
-        inOrder.verify(scraperClient).iniciarBusca(any());
-        verify(fonteCnpjExecutor).executar(7L, "bares", "Lisboa");   // 2ª fonte em paralelo
-    }
-
-    @Test
-    void scraperEmFalhaNaoMataOJobEDeixaFonteCnpjContinuar() {
-        when(properties.getLimiteDefault()).thenReturn(50);
-        when(properties.getTamanhoLote()).thenReturn(15);
-        when(properties.isColetarEmails()).thenReturn(true);
-        when(properties.callbackUrl()).thenReturn("http://cb");
-        when(jobService.criar(request, 1L)).thenReturn(7L);
-        doThrow(new RuntimeException("connection refused")).when(scraperClient).iniciarBusca(any());
-
-        Long jobId = buscaService.iniciar(request, 1L);
-
-        assertThat(jobId).isEqualTo(7L);
-        verify(jobService).marcarFonteConcluida(7L);                  // fonte scraper dada como concluída
-        verify(jobService, never()).marcarErro(any());                // não mata o job
-        verify(fonteCnpjExecutor).executar(7L, "bares", "Lisboa"); // 2ª fonte continua
+        inOrder.verify(fonteCnpjExecutor).executar(7L, TipoBusca.NICHO, "bares", "Lisboa");  // fonte primária
     }
 
     @Test
@@ -97,8 +71,7 @@ class BuscaServiceImplTest {
                 .isInstanceOf(QuotaExcedidaException.class);
 
         verify(jobService, never()).criar(any(), any());
-        verify(scraperClient, never()).iniciarBusca(any());
-        verify(fonteCnpjExecutor, never()).executar(any(), any(), any());
+        verify(fonteCnpjExecutor, never()).executar(any(), any(), any(), any());
     }
 
     @Test

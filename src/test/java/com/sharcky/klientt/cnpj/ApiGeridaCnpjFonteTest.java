@@ -72,6 +72,39 @@ class ApiGeridaCnpjFonteTest {
         }
     }
 
+    @Test
+    void buscaPorNomeEnviaBuscaTextual() throws Exception {
+        AtomicReference<String> corpo = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/v5/cnpj/pesquisa", exchange -> {
+            corpo.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            byte[] resposta = RESPOSTA.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, resposta.length);
+            exchange.getResponseBody().write(resposta);
+            exchange.close();
+        });
+        server.start();
+        try {
+            ClienteCnpjProperties props = new ClienteCnpjProperties();
+            props.setEnabled(true);
+            props.setBaseUrl("http://127.0.0.1:" + server.getAddress().getPort());
+            props.setApiKey("k");
+            FonteCnpj fonte = new ApiGeridaCnpjFonte(props);
+
+            List<EmpresaPayload> leads = fonte.buscarPorNome("Drogaria do Zé", "São Paulo", 10);
+
+            assertThat(corpo.get())
+                    .contains("\"busca_textual\":[{")
+                    .contains("\"texto\":[\"Drogaria do Zé\"]")   // texto é array, valor cru (não normalizado)
+                    .contains("\"tipo_busca\":\"radical\"")
+                    .contains("\"municipio\":[\"sao paulo\"]");
+            assertThat(leads).hasSize(1);
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private static final String RESPOSTA = """
             {"total":1,"cnpjs":[{
               "cnpj":"97551277000144",

@@ -63,6 +63,6 @@ class SecurityIntegrationTest {
 
         mvc.perform(get("/conta").session(session))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Teste")));
+                .andExpect(content().string(containsString("Agency")));   // utilizador de dev: plano Agency
     }
 }

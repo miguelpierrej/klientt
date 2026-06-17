@@ -18,11 +18,6 @@ import com.sharcky.klientt.busca.scoring.AvaliadorLead;
 import com.sharcky.klientt.conta.service.QuotaService;
 import com.sharcky.klientt.empresa.model.Empresa;
 import com.sharcky.klientt.empresa.repository.EmpresaRepository;
-import com.sharcky.klientt.scraper.client.ScraperClient;
-import com.sharcky.klientt.scraper.config.ScraperProperties;
-import com.sharcky.klientt.scraper.dto.ScrapeRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,37 +25,33 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Orquestra o fluxo assíncrono de busca (ARQUITETURA §4): cria o job, dispara o
- * scraper e, no polling, devolve o estado e (quando concluído) os leads pontuados.
+ * Orquestra o fluxo assíncrono de busca: cria o job, dispara a fonte primária (Casa dos Dados)
+ * e, no polling, devolve o estado e (quando concluído) os leads pontuados. O enriquecimento Maps
+ * corre depois, em background, por empresa (PLANO-DUAL-FONTE.md).
  */
 @Service
 public class BuscaServiceImpl implements BuscaService {
 
-    private static final Logger log = LoggerFactory.getLogger(BuscaServiceImpl.class);
     private static final double NOTA_BAIXA = 4.0;
     private static final int POUCOS_SEGUIDORES = 500;
 
     private final JobService jobService;
     private final QuotaService quotaService;
-    private final ScraperClient scraperClient;
     private final FonteCnpjExecutor fonteCnpjExecutor;
-    private final ScraperProperties properties;
     private final JobResultadoRepository jobResultadoRepository;
     private final EmpresaRepository empresaRepository;
     private final AvaliadorLead avaliador;
     private final LeadMapper leadMapper;
     private final LeadDetalheMapper detalheMapper;
 
-    public BuscaServiceImpl(JobService jobService, QuotaService quotaService, ScraperClient scraperClient,
-                            FonteCnpjExecutor fonteCnpjExecutor, ScraperProperties properties,
+    public BuscaServiceImpl(JobService jobService, QuotaService quotaService,
+                            FonteCnpjExecutor fonteCnpjExecutor,
                             JobResultadoRepository jobResultadoRepository,
                             EmpresaRepository empresaRepository, AvaliadorLead avaliador,
                             LeadMapper leadMapper, LeadDetalheMapper detalheMapper) {
         this.jobService = jobService;
         this.quotaService = quotaService;
-        this.scraperClient = scraperClient;
         this.fonteCnpjExecutor = fonteCnpjExecutor;
-        this.properties = properties;
         this.jobResultadoRepository = jobResultadoRepository;
         this.empresaRepository = empresaRepository;
         this.avaliador = avaliador;
@@ -71,31 +62,12 @@ public class BuscaServiceImpl implements BuscaService {
     @Override
     public Long iniciar(BuscaRequest request, Long utilizadorId) {
         quotaService.garantirDisponibilidade(utilizadorId);
-        // criar() é transacional e faz commit antes de dispararmos as fontes — assim o callback
-        // assíncrono do scraper e a fonte CNPJ encontram sempre o job já persistido.
+        // criar() é transacional e faz commit antes de dispararmos a fonte — assim o trabalho
+        // assíncrono encontra sempre o job já persistido.
         Long jobId = jobService.criar(request, utilizadorId);
-        // Duas fontes em paralelo: scraper (Maps, assíncrono via callback) + CNPJ-por-CNAE (assíncrono).
-        dispararScraper(jobId, request);
-        fonteCnpjExecutor.executar(jobId, request.termo(), request.regiao());
+        // Fonte primária: Casa dos Dados (NOME ou NICHO). O enriquecimento Maps corre depois.
+        fonteCnpjExecutor.executar(jobId, request.tipo(), request.termo(), request.regiao());
         return jobId;
-    }
-
-    private void dispararScraper(Long jobId, BuscaRequest request) {
-        // cnae=null: a resolução nicho→CNAE corre de forma assíncrona na FonteCnpj; o scraper
-        // (Maps) ignora o campo. Fica plumbado no contrato para uso futuro.
-        ScrapeRequest scrapeRequest = new ScrapeRequest(
-                String.valueOf(jobId), request.tipo(), request.termo(), request.regiao(), null,
-                properties.getLimiteDefault(), properties.getTamanhoLote(), properties.isColetarEmails(),
-                properties.isVerificarSmtp(), properties.callbackUrl());
-        try {
-            scraperClient.iniciarBusca(scrapeRequest);
-        } catch (Exception ex) {
-            // Falha graciosa (dual-fonte, CONTRATO §7.1): o scraper em baixo não mata o job —
-            // marca-se esta fonte como concluída e a fonte CNPJ ainda pode completar a busca.
-            log.warn("Scraper indisponível para jobId={} ({}): a busca continua só com a fonte CNPJ",
-                    jobId, ex.getMessage());
-            jobService.marcarFonteConcluida(jobId);
-        }
     }
 
     @Override
