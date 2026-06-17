@@ -76,7 +76,7 @@ public class BuscaServiceImpl implements BuscaService {
         Long jobId = jobService.criar(request, utilizadorId);
         // Duas fontes em paralelo: scraper (Maps, assíncrono via callback) + CNPJ-por-CNAE (assíncrono).
         dispararScraper(jobId, request);
-        fonteCnpjExecutor.executar(jobId, request.termo(), request.regiao(), properties.getLimiteDefault());
+        fonteCnpjExecutor.executar(jobId, request.termo(), request.regiao());
         return jobId;
     }
 

@@ -4,6 +4,7 @@ import com.sharcky.klientt.busca.job.JobService;
 import com.sharcky.klientt.cnae.Cnae;
 import com.sharcky.klientt.cnae.ResolvedorCnae;
 import com.sharcky.klientt.cnpj.FonteCnpj;
+import com.sharcky.klientt.cnpj.config.ClienteCnpjProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -26,17 +27,23 @@ public class FonteCnpjExecutor {
     private final FonteCnpj fonteCnpj;
     private final IngestaoService ingestaoService;
     private final JobService jobService;
+    private final ClienteCnpjProperties properties;
 
     public FonteCnpjExecutor(ResolvedorCnae resolvedorCnae, FonteCnpj fonteCnpj,
-                             IngestaoService ingestaoService, JobService jobService) {
+                             IngestaoService ingestaoService, JobService jobService,
+                             ClienteCnpjProperties properties) {
         this.resolvedorCnae = resolvedorCnae;
         this.fonteCnpj = fonteCnpj;
         this.ingestaoService = ingestaoService;
         this.jobService = jobService;
+        this.properties = properties;
     }
 
     @Async
-    public void executar(Long jobId, String termo, String regiao, int limite) {
+    public void executar(Long jobId, String termo, String regiao) {
+        // A fonte CNPJ usa o seu próprio limite (klientt.cnpj.limite-default) — controla o saldo
+        // consumido por busca, independente do limite do scraper.
+        int limite = properties.getLimiteDefault();
         try {
             for (Cnae cnae : resolvedorCnae.resolver(termo)) {
                 ingestaoService.ingerir(fonteCnpj.buscarPorCnae(cnae.codigo(), regiao, limite), jobId);

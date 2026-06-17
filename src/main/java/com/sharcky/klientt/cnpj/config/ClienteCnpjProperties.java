@@ -25,8 +25,8 @@ public class ClienteCnpjProperties {
     /** Token/chave do fornecedor. */
     private String apiKey = "";
 
-    /** Limite default de empresas por busca. */
-    private int limiteDefault = 50;
+    /** Limite default de empresas por busca (controla o saldo gasto por pesquisa). */
+    private int limiteDefault = 25;
 
     public boolean isConfigurado() {
         return enabled && baseUrl != null && !baseUrl.isBlank();
