@@ -42,7 +42,9 @@ public class DevContaSeeder implements ApplicationRunner {
         u.setNome("Dev");
         u.setEmail(DEV_EMAIL);
         u.setPasswordHash(passwordEncoder.encode("dev12345"));
-        planoRepository.findByNome("Teste").ifPresent(u::setPlano);
+        // Plano generoso em dev para não esbarrar na quota durante o desenvolvimento
+        // (o dual-fonte traz muitos leads por busca). Em produção o plano vem do registo/pagamento.
+        planoRepository.findByNome("Agency").or(() -> planoRepository.findByNome("Teste")).ifPresent(u::setPlano);
         utilizadorRepository.save(u);
         log.info("[DEV] utilizador criado: {} / dev12345", DEV_EMAIL);
     }
