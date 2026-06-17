@@ -30,6 +30,11 @@
                     <span th:unless="${lead.email()}">—</span>
                 </dd>
                 <dt>Morada</dt><dd th:text="${lead.endereco()} ?: '—'">—</dd>
+                <dt th:if="${lead.enderecoMaps()}">Morada (Maps)</dt>
+                <dd th:if="${lead.enderecoMaps()}">
+                    <span th:text="${lead.enderecoMaps()}">—</span>
+                    <span class="tag alerta" th:if="${lead.enderecoDivergente()}">endereço divergente</span>
+                </dd>
                 <dt>CNPJ</dt><dd th:text="${lead.cnpj()} ?: '—'">—</dd>
                 <dt>Website</dt>
                 <dd>

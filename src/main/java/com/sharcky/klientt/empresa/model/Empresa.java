@@ -45,6 +45,14 @@ public class Empresa {
     @Column(length = 255)
     private String website;
 
+    /** Endereço encontrado no Google Maps (enriquecimento) — comparado com o cadastral. */
+    @Column(name = "endereco_maps", length = 255)
+    private String enderecoMaps;
+
+    /** O endereço do Maps difere do cadastral (Receita)? Sinal para a agência. */
+    @Column(name = "endereco_divergente")
+    private Boolean enderecoDivergente;
+
     private Double lat;
     private Double lng;
 

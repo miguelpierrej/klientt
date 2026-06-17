@@ -19,11 +19,17 @@ public interface JobService {
 
     void concluir(Long jobId);
 
-    /**
-     * Marca que uma das fontes (scraper ou CNPJ-por-CNAE) terminou. Quando todas as fontes
-     * esperadas reportarem, conclui o job. Dual-fonte (PLANO-DUAL-FONTE.md, Fase E).
-     */
+    /** (Legado) marca que uma fonte do fluxo de nicho terminou; conclui quando todas reportarem. */
     void marcarFonteConcluida(Long jobId);
+
+    /**
+     * A descoberta (Casa dos Dados) terminou: regista quantos enriquecimentos Maps esperar.
+     * Conclui já o job se não houver enriquecimentos pendentes (PLANO-DUAL-FONTE.md, Fase 2).
+     */
+    void marcarDescobertaConcluida(Long jobId, int enriquecimentosEsperados);
+
+    /** Regista um enriquecimento Maps recebido; conclui o job quando todos chegarem. */
+    void registarEnriquecimento(Long jobId);
 
     void marcarErro(Long jobId);
 }

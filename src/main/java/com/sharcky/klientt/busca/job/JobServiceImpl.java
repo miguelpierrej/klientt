@@ -66,6 +66,35 @@ public class JobServiceImpl implements JobService {
         });
     }
 
+    @Override
+    @Transactional
+    public void marcarDescobertaConcluida(Long jobId, int enriquecimentosEsperados) {
+        jobRepository.findById(jobId).ifPresent(job -> {
+            if (job.getEstado() != EstadoJob.A_PROCESSAR) {
+                return;
+            }
+            job.setDescobertaConcluida(true);
+            job.setEnriquecimentosEsperados(enriquecimentosEsperados);
+            if (job.getEnriquecimentosRecebidos() >= enriquecimentosEsperados) {
+                concluirJob(job);
+            }
+        });
+    }
+
+    @Override
+    @Transactional
+    public void registarEnriquecimento(Long jobId) {
+        jobRepository.findById(jobId).ifPresent(job -> {
+            if (job.getEstado() != EstadoJob.A_PROCESSAR) {
+                return;
+            }
+            job.setEnriquecimentosRecebidos(job.getEnriquecimentosRecebidos() + 1);
+            if (job.isDescobertaConcluida() && job.getEnriquecimentosRecebidos() >= job.getEnriquecimentosEsperados()) {
+                concluirJob(job);
+            }
+        });
+    }
+
     private void concluirJob(JobBusca job) {
         job.setEstado(EstadoJob.CONCLUIDO);
         job.setConcluidoEm(LocalDateTime.now());

@@ -6,6 +6,8 @@ import com.sharcky.klientt.cnae.Cnae;
 import com.sharcky.klientt.cnae.ResolvedorCnae;
 import com.sharcky.klientt.cnpj.FonteCnpj;
 import com.sharcky.klientt.cnpj.config.ClienteCnpjProperties;
+import com.sharcky.klientt.enriquecimento.client.EnriquecimentoClient;
+import com.sharcky.klientt.scraper.config.ScraperProperties;
 import com.sharcky.klientt.scraper.dto.EmpresaPayload;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +29,8 @@ class FonteCnpjExecutorTest {
     @Mock IngestaoService ingestaoService;
     @Mock JobService jobService;
     @Mock ClienteCnpjProperties properties;
+    @Mock EnriquecimentoClient enriquecimentoClient;
+    @Mock ScraperProperties scraperProperties;
     @InjectMocks FonteCnpjExecutor executor;
 
     private final List<EmpresaPayload> empresas = List.of(new EmpresaPayload(
@@ -34,15 +38,16 @@ class FonteCnpjExecutorTest {
             "casadosdados", null, List.of(), null));
 
     @Test
-    void nichoResolveCnaeBuscaIngereEMarcaConcluida() {
+    void nichoIngereDisparaEnriquecimentoEMarcaDescoberta() {
         when(properties.getLimiteDefault()).thenReturn(25);
         when(resolvedorCnae.resolver("barbearias")).thenReturn(List.of(new Cnae("9602-5/01", "Cabeleireiros")));
-        when(fonteCnpj.buscarPorCnae("9602-5/01", "São Paulo", 25)).thenReturn(empresas);   // limite próprio da fonte
+        when(fonteCnpj.buscarPorCnae("9602-5/01", "São Paulo", 25)).thenReturn(empresas);
 
         executor.executar(7L, TipoBusca.NICHO, "barbearias", "São Paulo");
 
         verify(ingestaoService).ingerir(empresas, 7L);
-        verify(jobService).marcarFonteConcluida(7L);
+        verify(enriquecimentoClient).enriquecer(any());                  // 1 empresa com CNPJ
+        verify(jobService).marcarDescobertaConcluida(7L, 1);             // 1 enriquecimento esperado
     }
 
     @Test
@@ -53,30 +58,30 @@ class FonteCnpjExecutorTest {
         executor.executar(7L, TipoBusca.NOME, "Barbearia do Zé", "São Paulo");
 
         verify(ingestaoService).ingerir(empresas, 7L);
-        verify(resolvedorCnae, never()).resolver(any());   // NOME não passa pelo resolvedor
-        verify(jobService).marcarFonteConcluida(7L);
+        verify(resolvedorCnae, never()).resolver(any());
+        verify(jobService).marcarDescobertaConcluida(7L, 1);
     }
 
     @Test
-    void nichoSemCnaeResolvidoNaoBuscaMasMarcaConcluida() {
+    void nichoSemCnaeResolvidoMarcaDescobertaComZero() {
         when(properties.getLimiteDefault()).thenReturn(25);
         when(resolvedorCnae.resolver("nicho desconhecido")).thenReturn(List.of());
 
         executor.executar(7L, TipoBusca.NICHO, "nicho desconhecido", "São Paulo");
 
         verify(fonteCnpj, never()).buscarPorCnae(any(), any(), anyInt());
-        verify(ingestaoService, never()).ingerir(any(), any());
-        verify(jobService).marcarFonteConcluida(7L);   // job não fica preso
+        verify(enriquecimentoClient, never()).enriquecer(any());
+        verify(jobService).marcarDescobertaConcluida(7L, 0);   // sem empresas → conclui já
     }
 
     @Test
-    void marcaConcluidaMesmoComErro() {
+    void marcaDescobertaMesmoComErro() {
         when(properties.getLimiteDefault()).thenReturn(25);
         when(resolvedorCnae.resolver("barbearias")).thenReturn(List.of(new Cnae("9602-5/01", "Cabeleireiros")));
         when(fonteCnpj.buscarPorCnae(any(), any(), anyInt())).thenThrow(new RuntimeException("API caiu"));
 
         executor.executar(7L, TipoBusca.NICHO, "barbearias", "São Paulo");
 
-        verify(jobService).marcarFonteConcluida(7L);   // falha graciosa
+        verify(jobService).marcarDescobertaConcluida(7L, 0);   // falha graciosa
     }
 }

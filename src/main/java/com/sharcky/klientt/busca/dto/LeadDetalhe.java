@@ -16,6 +16,8 @@ public record LeadDetalhe(
         String telefone,
         String email,
         String endereco,
+        String enderecoMaps,
+        Boolean enderecoDivergente,
         String website,
         String fonte,
         boolean contactavel,

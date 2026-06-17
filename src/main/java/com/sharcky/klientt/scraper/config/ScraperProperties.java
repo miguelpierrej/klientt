@@ -29,6 +29,12 @@ public class ScraperProperties {
     /** Caminho do webhook que recebe o callback do scraper. */
     private String callbackPath = "/api/scraper/callbacks";
 
+    /** Caminho do webhook que recebe o callback de enriquecimento por empresa (Fase 2). */
+    private String enriquecimentoCallbackPath = "/api/scraper/enriquecimento";
+
+    /** Endpoint do scraper para enriquecer uma empresa (Maps por nome). */
+    private String enriquecimentoPath = "/v1/enrich";
+
     /** Limite de empresas por busca. */
     private int limiteDefault = 50;
 
@@ -46,5 +52,9 @@ public class ScraperProperties {
 
     public String callbackUrl() {
         return publicBaseUrl + callbackPath;
+    }
+
+    public String enriquecimentoCallbackUrl() {
+        return publicBaseUrl + enriquecimentoCallbackPath;
     }
 }

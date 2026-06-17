@@ -45,4 +45,44 @@ class JobServiceImplTest {
         assertThat(job.getEstado()).isEqualTo(EstadoJob.ERRO);
         assertThat(job.getFontesConcluidas()).isZero();
     }
+
+    @Test
+    void descobertaSemEnriquecimentosConcluiJa() {
+        JobBusca job = new JobBusca();
+        job.setEstado(EstadoJob.A_PROCESSAR);
+        when(jobRepository.findById(5L)).thenReturn(Optional.of(job));
+
+        jobService.marcarDescobertaConcluida(5L, 0);
+
+        assertThat(job.getEstado()).isEqualTo(EstadoJob.CONCLUIDO);
+    }
+
+    @Test
+    void jobConcluiSoAposTodosOsEnriquecimentos() {
+        JobBusca job = new JobBusca();
+        job.setEstado(EstadoJob.A_PROCESSAR);
+        when(jobRepository.findById(5L)).thenReturn(Optional.of(job));
+
+        jobService.marcarDescobertaConcluida(5L, 2);   // espera 2
+        assertThat(job.getEstado()).isEqualTo(EstadoJob.A_PROCESSAR);
+
+        jobService.registarEnriquecimento(5L);
+        assertThat(job.getEstado()).isEqualTo(EstadoJob.A_PROCESSAR);
+
+        jobService.registarEnriquecimento(5L);         // 2º — conclui
+        assertThat(job.getEstado()).isEqualTo(EstadoJob.CONCLUIDO);
+    }
+
+    @Test
+    void enriquecimentoQueChegaAntesDaDescobertaNaoConcluiPrematuramente() {
+        JobBusca job = new JobBusca();
+        job.setEstado(EstadoJob.A_PROCESSAR);
+        when(jobRepository.findById(5L)).thenReturn(Optional.of(job));
+
+        jobService.registarEnriquecimento(5L);          // callback antes da descoberta marcar
+        assertThat(job.getEstado()).isEqualTo(EstadoJob.A_PROCESSAR);
+
+        jobService.marcarDescobertaConcluida(5L, 1);     // já tinha 1 recebido → conclui
+        assertThat(job.getEstado()).isEqualTo(EstadoJob.CONCLUIDO);
+    }
 }
