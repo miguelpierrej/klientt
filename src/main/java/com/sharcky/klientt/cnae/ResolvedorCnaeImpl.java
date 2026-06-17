@@ -3,6 +3,8 @@ package com.sharcky.klientt.cnae;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,20 +12,31 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Resolve nicho→CNAE: tabela determinística para os nichos comuns (instantâneo,
- * grátis) e, no que falhar, fallback para o LLM (com cache do resultado).
+ * Resolve nicho→CNAE usando o catálogo CNAE do IBGE (tabela {@code cnae}):
+ * <ol>
+ *   <li>sinónimos coloquiais (ex.: "barbearia") → código, validados no catálogo;</li>
+ *   <li>busca por descrição no catálogo (termos com redação oficial);</li>
+ *   <li>fallback LLM (Claude), com o código devolvido validado no catálogo.</li>
+ * </ol>
+ * Devolve no máximo 1 CNAE (controla o saldo gasto na Casa dos Dados). Descrição sempre a oficial.
  */
 @Service
 public class ResolvedorCnaeImpl implements ResolvedorCnae {
 
-    /** Tabela curada (keyword normalizada → CNAE). Extensível. */
-    private static final Map<String, Cnae> TABELA = tabela();
+    /** Sinónimos coloquiais → código CNAE (o catálogo dá a descrição oficial). */
+    private static final Map<String, String> SINONIMOS = sinonimos();
 
     private final Optional<TradutorCnaeLlm> tradutor;
+    private final CnaeCatalogoRepository catalogoRepository;
     private final Map<String, List<Cnae>> cache = new ConcurrentHashMap<>();
 
-    public ResolvedorCnaeImpl(Optional<TradutorCnaeLlm> tradutor) {
+    /** Índice em memória do catálogo (carregado lazy na 1ª resolução). */
+    private volatile List<Entrada> indice;
+    private volatile Map<String, String> porCodigo;   // codigo → descrição oficial
+
+    public ResolvedorCnaeImpl(Optional<TradutorCnaeLlm> tradutor, CnaeCatalogoRepository catalogoRepository) {
         this.tradutor = tradutor;
+        this.catalogoRepository = catalogoRepository;
     }
 
     @Override
@@ -31,48 +44,133 @@ public class ResolvedorCnaeImpl implements ResolvedorCnae {
         if (termo == null || termo.isBlank()) {
             return List.of();
         }
-        String chave = normalizar(termo);
+        String alvo = normalizar(termo);
 
-        Cnae exato = TABELA.get(chave);
-        if (exato != null) {
-            return List.of(exato);
-        }
-        // Cobre plurais e variações ("barbearias" contém "barbearia").
-        for (Map.Entry<String, Cnae> e : TABELA.entrySet()) {
-            if (chave.contains(e.getKey())) {
-                return List.of(e.getValue());
+        // 1) Sinónimos coloquiais (validados no catálogo).
+        for (Map.Entry<String, String> s : SINONIMOS.entrySet()) {
+            if (alvo.contains(s.getKey())) {
+                Cnae c = doCatalogo(s.getValue());
+                if (c != null) {
+                    return List.of(c);
+                }
             }
         }
-        // Fallback LLM (com cache); sem tradutor configurado, devolve vazio.
-        return cache.computeIfAbsent(chave,
-                k -> tradutor.map(t -> t.traduzir(termo)).orElseGet(List::of));
+
+        // 2) Busca por descrição no catálogo.
+        Cnae porDescricao = melhorPorDescricao(alvo);
+        if (porDescricao != null) {
+            return List.of(porDescricao);
+        }
+
+        // 3) Fallback LLM (com cache); valida o código no catálogo.
+        return cache.computeIfAbsent(alvo, k -> tradutor
+                .map(t -> t.traduzir(termo).stream()
+                        .map(c -> doCatalogo(c.codigo()))
+                        .filter(java.util.Objects::nonNull)
+                        .limit(1)
+                        .toList())
+                .orElseGet(List::of));
+    }
+
+    /** Melhor entrada do catálogo por nº de palavras do termo presentes na descrição. */
+    private Cnae melhorPorDescricao(String alvo) {
+        List<String> tokens = Arrays.stream(alvo.split("[^a-z0-9]+"))
+                .filter(t -> t.length() >= 3)
+                .distinct()
+                .toList();
+        if (tokens.isEmpty()) {
+            return null;
+        }
+        Entrada melhor = null;
+        int melhorScore = 0;
+        for (Entrada e : indice()) {
+            int score = 0;
+            for (String t : tokens) {
+                if (e.descricaoNorm().contains(t)) {
+                    score++;
+                }
+            }
+            if (score > melhorScore
+                    || (score == melhorScore && melhor != null && e.descricao().length() < melhor.descricao().length())) {
+                if (score >= 1) {
+                    melhor = e;
+                    melhorScore = score;
+                }
+            }
+        }
+        return melhor != null ? new Cnae(melhor.codigo(), melhor.descricao()) : null;
+    }
+
+    /** Devolve o CNAE do catálogo (descrição oficial) ou {@code null} se o código não existir. */
+    private Cnae doCatalogo(String codigo) {
+        String c = soDigitos(codigo);
+        if (c == null) {
+            return null;
+        }
+        String descricao = porCodigo().get(c);
+        return descricao != null ? new Cnae(c, descricao) : null;
+    }
+
+    private List<Entrada> indice() {
+        List<Entrada> i = indice;
+        if (i == null) {
+            carregar();
+            i = indice;
+        }
+        return i;
+    }
+
+    private Map<String, String> porCodigo() {
+        Map<String, String> m = porCodigo;
+        if (m == null) {
+            carregar();
+            m = porCodigo;
+        }
+        return m;
+    }
+
+    private synchronized void carregar() {
+        if (indice != null) {
+            return;
+        }
+        List<Entrada> entradas = new ArrayList<>();
+        Map<String, String> mapa = new java.util.HashMap<>();
+        for (CnaeCatalogo c : catalogoRepository.findAll()) {
+            entradas.add(new Entrada(c.getCodigo(), c.getDescricao(), normalizar(c.getDescricao())));
+            mapa.put(c.getCodigo(), c.getDescricao());
+        }
+        this.porCodigo = mapa;
+        this.indice = entradas;
+    }
+
+    private static String soDigitos(String codigo) {
+        if (codigo == null) {
+            return null;
+        }
+        String d = codigo.replaceAll("\\D", "");
+        return d.isEmpty() ? null : d;
     }
 
     private static String normalizar(String s) {
-        String n = Normalizer.normalize(s.trim().toLowerCase(), Normalizer.Form.NFD);
-        return n.replaceAll("\\p{M}+", "");
+        return Normalizer.normalize(s.trim().toLowerCase(), Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
     }
 
-    private static Map<String, Cnae> tabela() {
-        Map<String, Cnae> m = new LinkedHashMap<>();
-        m.put("barbearia", new Cnae("9602-5/01", "Cabeleireiros, manicure e pedicure"));
-        m.put("salao de beleza", new Cnae("9602-5/02", "Atividades de estética e outros serviços de cuidados com a beleza"));
-        m.put("restaurante", new Cnae("5611-2/01", "Restaurantes e similares"));
-        m.put("pizzaria", new Cnae("5611-2/01", "Restaurantes e similares"));
-        m.put("lanchonete", new Cnae("5611-2/03", "Lanchonetes, casas de chá, de sucos e similares"));
-        m.put("hamburgueria", new Cnae("5611-2/03", "Lanchonetes, casas de chá, de sucos e similares"));
-        m.put("cafeteria", new Cnae("5611-2/03", "Lanchonetes, casas de chá, de sucos e similares"));
-        m.put("padaria", new Cnae("4721-1/02", "Padaria e confeitaria com predominância de revenda"));
-        m.put("academia", new Cnae("9313-1/00", "Atividades de condicionamento físico"));
-        m.put("pet shop", new Cnae("4789-0/04", "Comércio varejista de animais vivos e de artigos e alimentos para animais"));
-        m.put("farmacia", new Cnae("4771-7/01", "Comércio varejista de produtos farmacêuticos, sem manipulação de fórmulas"));
-        m.put("supermercado", new Cnae("4711-3/02", "Comércio varejista de mercadorias em geral (supermercados)"));
-        m.put("mercado", new Cnae("4712-1/00", "Comércio varejista de mercadorias em geral (minimercados, mercearias)"));
-        m.put("oficina mecanica", new Cnae("4520-0/01", "Serviços de manutenção e reparação mecânica de veículos automotores"));
-        m.put("dentista", new Cnae("8630-5/04", "Atividade odontológica"));
-        m.put("clinica odontologica", new Cnae("8630-5/04", "Atividade odontológica"));
-        m.put("advocacia", new Cnae("6911-7/01", "Serviços advocatícios"));
-        m.put("contabilidade", new Cnae("6920-6/01", "Atividades de contabilidade"));
+    private record Entrada(String codigo, String descricao, String descricaoNorm) {
+    }
+
+    private static Map<String, String> sinonimos() {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("barbearia", "9602501");
+        m.put("salao de beleza", "9602502");
+        m.put("pet shop", "4789004");
+        m.put("petshop", "4789004");
+        m.put("oficina mecanica", "4520001");
+        m.put("lanchonete", "5611203");
+        m.put("hamburgueria", "5611203");
+        m.put("cafeteria", "5611203");
+        m.put("supermercado", "4711302");
+        m.put("mercado", "4712100");
+        m.put("academia", "9313100");
         return m;
     }
 }

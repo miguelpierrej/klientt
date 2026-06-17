@@ -10,43 +10,80 @@ import static org.mockito.Mockito.*;
 
 class ResolvedorCnaeImplTest {
 
-    @Test
-    void resolvePelaTabelaSemChamarLlm() {
-        TradutorCnaeLlm tradutor = mock(TradutorCnaeLlm.class);
-        ResolvedorCnae resolvedor = new ResolvedorCnaeImpl(Optional.of(tradutor));
+    private CnaeCatalogo cnae(String codigo, String descricao) {
+        CnaeCatalogo c = new CnaeCatalogo();
+        c.setCodigo(codigo);
+        c.setDescricao(descricao);
+        return c;
+    }
 
-        List<Cnae> r = resolvedor.resolver("barbearias em São Paulo");
-
-        assertThat(r).extracting(Cnae::codigo).containsExactly("9602-5/01");
-        verifyNoInteractions(tradutor);
+    private CnaeCatalogoRepository catalogo() {
+        CnaeCatalogoRepository repo = mock(CnaeCatalogoRepository.class);
+        when(repo.findAll()).thenReturn(List.of(
+                cnae("9602501", "CABELEIREIROS, MANICURE E PEDICURE"),
+                cnae("5611201", "RESTAURANTES E SIMILARES"),
+                cnae("4711302", "COMÉRCIO VAREJISTA DE MERCADORIAS EM GERAL (SUPERMERCADOS)")));
+        return repo;
     }
 
     @Test
-    void resolvePeloFallbackECacheia() {
+    void sinonimoColoquialValidadoNoCatalogo() {
+        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), catalogo());
+
+        List<Cnae> res = r.resolver("barbearias em São Paulo");
+
+        assertThat(res).singleElement().satisfies(c -> {
+            assertThat(c.codigo()).isEqualTo("9602501");
+            assertThat(c.descricao()).isEqualTo("CABELEIREIROS, MANICURE E PEDICURE");   // descrição oficial
+        });
+    }
+
+    @Test
+    void buscaPorDescricaoNoCatalogo() {
+        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), catalogo());
+
+        List<Cnae> res = r.resolver("restaurante");
+
+        assertThat(res).singleElement()
+                .satisfies(c -> assertThat(c.codigo()).isEqualTo("5611201"));
+    }
+
+    @Test
+    void fallbackLlmComCodigoValidoUsaDescricaoOficial() {
         TradutorCnaeLlm tradutor = mock(TradutorCnaeLlm.class);
         when(tradutor.traduzir("estúdio de tatuagem"))
-                .thenReturn(List.of(new Cnae("9609-2/06", "Serviços de tatuagem e colocação de piercing")));
-        ResolvedorCnae resolvedor = new ResolvedorCnaeImpl(Optional.of(tradutor));
+                .thenReturn(List.of(new Cnae("9602501", "descrição do LLM (ignorada)")));
+        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.of(tradutor), catalogo());
 
-        List<Cnae> primeira = resolvedor.resolver("estúdio de tatuagem");
-        List<Cnae> segunda = resolvedor.resolver("estúdio de tatuagem");   // deve vir da cache
+        List<Cnae> res = r.resolver("estúdio de tatuagem");
 
-        assertThat(primeira).extracting(Cnae::codigo).containsExactly("9609-2/06");
-        assertThat(segunda).isEqualTo(primeira);
-        verify(tradutor, times(1)).traduzir("estúdio de tatuagem");   // LLM chamado uma só vez
+        assertThat(res).singleElement().satisfies(c -> {
+            assertThat(c.codigo()).isEqualTo("9602501");
+            assertThat(c.descricao()).isEqualTo("CABELEIREIROS, MANICURE E PEDICURE");   // do catálogo, não do LLM
+        });
     }
 
     @Test
-    void semFallbackEForaDaTabelaDevolveVazio() {
-        ResolvedorCnae resolvedor = new ResolvedorCnaeImpl(Optional.empty());
+    void fallbackLlmComCodigoInexistenteEhDescartado() {
+        TradutorCnaeLlm tradutor = mock(TradutorCnaeLlm.class);
+        when(tradutor.traduzir("coisa exótica")).thenReturn(List.of(new Cnae("0000000", "inventado")));
+        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.of(tradutor), catalogo());
 
-        assertThat(resolvedor.resolver("coworking espacial")).isEmpty();
+        assertThat(r.resolver("coisa exótica")).isEmpty();   // código não existe no catálogo
+    }
+
+    @Test
+    void semFallbackEForaDoCatalogoDevolveVazio() {
+        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), catalogo());
+
+        assertThat(r.resolver("xyzqualquercoisa")).isEmpty();
     }
 
     @Test
     void termoVazioDevolveVazio() {
-        ResolvedorCnae resolvedor = new ResolvedorCnaeImpl(Optional.empty());
+        // Não toca no catálogo — sem stub de findAll.
+        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), mock(CnaeCatalogoRepository.class));
 
-        assertThat(resolvedor.resolver("  ")).isEmpty();
+        assertThat(r.resolver("  ")).isEmpty();
     }
 }
