@@ -49,18 +49,22 @@ public class EnriquecimentoService {
     }
 
     private void aplicarNaEmpresa(Empresa empresa, EnriquecimentoCallback callback) {
-        if (callback.sinais() != null) {
-            empresa.definirSinais(scrapeMapper.toSinais(callback.sinais()));
+        empresa.setConfirmadoMaps(callback.encontrado());
+        if (callback.encontrado()) {
+            if (callback.sinais() != null) {
+                empresa.definirSinais(scrapeMapper.toSinais(callback.sinais()));
+            }
+            if (callback.redes() != null && !callback.redes().isEmpty()) {
+                // A descoberta não trouxe redes; o Maps é a fonte das redes.
+                empresa.getRedes().clear();
+                callback.redes().forEach(r -> empresa.adicionarRede(scrapeMapper.toRede(r)));
+            }
+            empresa.setEnderecoMaps(callback.enderecoMaps());
+            empresa.setEnderecoDivergente(divergente(empresa.getEndereco(), callback.enderecoMaps()));
         }
-        if (callback.redes() != null && !callback.redes().isEmpty()) {
-            // A descoberta não trouxe redes; o Maps é a fonte das redes.
-            empresa.getRedes().clear();
-            callback.redes().forEach(r -> empresa.adicionarRede(scrapeMapper.toRede(r)));
-        }
-        empresa.setEnderecoMaps(callback.enderecoMaps());
-        empresa.setEnderecoDivergente(divergente(empresa.getEndereco(), callback.enderecoMaps()));
         empresaRepository.save(empresa);
-        log.info("Enriquecimento aplicado cnpj={} (divergente={})", empresa.getCnpj(), empresa.getEnderecoDivergente());
+        log.info("Enriquecimento aplicado cnpj={} (confirmado={}, divergente={})",
+                empresa.getCnpj(), empresa.getConfirmadoMaps(), empresa.getEnderecoDivergente());
     }
 
     /**

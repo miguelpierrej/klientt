@@ -14,6 +14,7 @@
                 <span th:text="${lead.cidade()} ?: 'Cidade não informada'">cidade</span>
                 · score <strong th:text="${lead.score()}">0</strong>
                 <span class="tag ok" th:if="${lead.contactavel()}">Com contato</span>
+                <span class="tag alerta" th:if="${lead.confirmadoMaps() == false}">Não confirmado no Maps</span>
                 <span class="tag perigo" th:if="${lead.proconEviteSite()}">
                     <svg th:replace="~{fragments/icones :: alerta}"></svg> Procon: Evite Sites</span>
             </p>

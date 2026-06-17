@@ -53,6 +53,10 @@ public class Empresa {
     @Column(name = "endereco_divergente")
     private Boolean enderecoDivergente;
 
+    /** Confirmada no Google Maps? null=não enriquecida; false=enriquecida sem match; true=encontrada. */
+    @Column(name = "confirmado_maps")
+    private Boolean confirmadoMaps;
+
     private Double lat;
     private Double lng;
 

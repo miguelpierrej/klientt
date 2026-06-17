@@ -26,6 +26,7 @@ public interface LeadDetalheMapper {
     @Mapping(target = "endereco", source = "empresa.endereco")
     @Mapping(target = "enderecoMaps", source = "empresa.enderecoMaps")
     @Mapping(target = "enderecoDivergente", source = "empresa.enderecoDivergente")
+    @Mapping(target = "confirmadoMaps", source = "empresa.confirmadoMaps")
     @Mapping(target = "website", source = "empresa.website")
     @Mapping(target = "fonte", source = "empresa.fonte")
     @Mapping(target = "contactavel", source = "empresa.contactavel")

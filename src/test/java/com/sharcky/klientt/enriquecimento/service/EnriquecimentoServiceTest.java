@@ -44,9 +44,26 @@ class EnriquecimentoServiceTest {
 
         service.aplicar(cb);
 
+        assertThat(empresa.getConfirmadoMaps()).isTrue();
         assertThat(empresa.getSinais()).isNotNull();
         assertThat(empresa.getEnderecoMaps()).isEqualTo("RUA EXEMPLO 10 CENTRO SAO PAULO");
         assertThat(empresa.getEnderecoDivergente()).isFalse();   // partilha "rua/exemplo/centro" → não divergente
+        verify(jobService).registarEnriquecimento(7L);
+    }
+
+    @Test
+    void naoEncontradoMarcaNaoConfirmadoSemAplicarSinais() {
+        Empresa empresa = new Empresa();
+        empresa.setCnpj("12345678000199");
+        empresa.setEndereco("RUA EXEMPLO, 10");
+        when(empresaRepository.findFirstByCnpj("12345678000199")).thenReturn(Optional.of(empresa));
+        when(empresaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.aplicar(new EnriquecimentoCallback("7", "12345678000199", false, null, null, null));
+
+        assertThat(empresa.getConfirmadoMaps()).isFalse();
+        assertThat(empresa.getSinais()).isNull();
+        assertThat(empresa.getEnderecoMaps()).isNull();
         verify(jobService).registarEnriquecimento(7L);
     }
 

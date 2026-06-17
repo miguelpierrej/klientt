@@ -88,7 +88,7 @@ public class FonteCnpjExecutor {
             String municipio = e.cidade() != null ? e.cidade() : regiao;
             try {
                 enriquecimentoClient.enriquecer(new EnriquecimentoRequest(
-                        String.valueOf(jobId), e.cnpj(), e.nome(), municipio, callbackUrl));
+                        String.valueOf(jobId), e.cnpj(), e.nome(), municipio, e.endereco(), callbackUrl));
                 n++;
             } catch (Exception ex) {
                 // Dispatch falhou (scraper em baixo) — não conta como esperado, para o job não ficar preso.

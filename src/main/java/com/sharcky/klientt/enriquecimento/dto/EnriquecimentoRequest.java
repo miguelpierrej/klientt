@@ -10,6 +10,7 @@ public record EnriquecimentoRequest(
         String cnpj,
         String nome,
         String municipio,
+        String endereco,
         String callbackUrl
 ) {
 }
