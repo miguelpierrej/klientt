@@ -45,18 +45,6 @@ public class Empresa {
     @Column(length = 255)
     private String website;
 
-    /** Endereço encontrado no Google Maps (enriquecimento) — comparado com o cadastral. */
-    @Column(name = "endereco_maps", length = 255)
-    private String enderecoMaps;
-
-    /** O endereço do Maps difere do cadastral (Receita)? Sinal para a agência. */
-    @Column(name = "endereco_divergente")
-    private Boolean enderecoDivergente;
-
-    /** Confirmada no Google Maps? null=não enriquecida; false=enriquecida sem match; true=encontrada. */
-    @Column(name = "confirmado_maps")
-    private Boolean confirmadoMaps;
-
     private Double lat;
     private Double lng;
 
@@ -97,24 +85,8 @@ public class Empresa {
     @Column(name = "atualizado_em", nullable = false)
     private LocalDateTime atualizadoEm = LocalDateTime.now();
 
-    @OneToOne(mappedBy = "empresa", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    private Sinais sinais;
-
-    @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<EmpresaRede> redes = new ArrayList<>();
-
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Contato> contatos = new ArrayList<>();
-
-    public void definirSinais(Sinais s) {
-        s.setEmpresa(this);
-        this.sinais = s;
-    }
-
-    public void adicionarRede(EmpresaRede rede) {
-        rede.setEmpresa(this);
-        this.redes.add(rede);
-    }
 
     public void adicionarContato(Contato contato) {
         contato.setEmpresa(this);

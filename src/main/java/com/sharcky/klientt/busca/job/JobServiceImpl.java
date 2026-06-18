@@ -27,8 +27,6 @@ public class JobServiceImpl implements JobService {
         job.setTermo(request.termo());
         job.setRegiao(request.regiao());
         job.setEstado(EstadoJob.A_PROCESSAR);
-        // Fonte primária única (Casa dos Dados); o enriquecimento Maps (Fase 2) será contado à parte.
-        job.setFontesEsperadas(1);
         return jobRepository.save(job).getId();
     }
 
@@ -40,59 +38,15 @@ public class JobServiceImpl implements JobService {
 
     @Override
     @Transactional
-    public void registarResultado(Long jobId, Long empresaId, int score) {
-        // save() faz merge (chave atribuída): callbacks repetidos atualizam em vez de duplicar.
-        resultadoRepository.save(new JobResultado(jobId, empresaId, score));
+    public void registarResultado(Long jobId, Long empresaId) {
+        // save() faz merge (chave atribuída): reenvios atualizam em vez de duplicar.
+        resultadoRepository.save(new JobResultado(jobId, empresaId));
     }
 
     @Override
     @Transactional
     public void concluir(Long jobId) {
         jobRepository.findById(jobId).ifPresent(this::concluirJob);
-    }
-
-    @Override
-    @Transactional
-    public void marcarFonteConcluida(Long jobId) {
-        jobRepository.findById(jobId).ifPresent(job -> {
-            // Só conta enquanto o job está a processar (ignora fontes a reportar após ERRO/CONCLUIDO).
-            if (job.getEstado() != EstadoJob.A_PROCESSAR) {
-                return;
-            }
-            job.setFontesConcluidas(job.getFontesConcluidas() + 1);
-            if (job.getFontesConcluidas() >= job.getFontesEsperadas()) {
-                concluirJob(job);
-            }
-        });
-    }
-
-    @Override
-    @Transactional
-    public void marcarDescobertaConcluida(Long jobId, int enriquecimentosEsperados) {
-        jobRepository.findById(jobId).ifPresent(job -> {
-            if (job.getEstado() != EstadoJob.A_PROCESSAR) {
-                return;
-            }
-            job.setDescobertaConcluida(true);
-            job.setEnriquecimentosEsperados(enriquecimentosEsperados);
-            if (job.getEnriquecimentosRecebidos() >= enriquecimentosEsperados) {
-                concluirJob(job);
-            }
-        });
-    }
-
-    @Override
-    @Transactional
-    public void registarEnriquecimento(Long jobId) {
-        jobRepository.findById(jobId).ifPresent(job -> {
-            if (job.getEstado() != EstadoJob.A_PROCESSAR) {
-                return;
-            }
-            job.setEnriquecimentosRecebidos(job.getEnriquecimentosRecebidos() + 1);
-            if (job.isDescobertaConcluida() && job.getEnriquecimentosRecebidos() >= job.getEnriquecimentosEsperados()) {
-                concluirJob(job);
-            }
-        });
     }
 
     private void concluirJob(JobBusca job) {

@@ -1,6 +1,6 @@
 package com.sharcky.klientt.cnpj;
 
-import com.sharcky.klientt.scraper.dto.EmpresaPayload;
+import com.sharcky.klientt.cnpj.dto.EmpresaPayload;
 
 import java.util.List;
 

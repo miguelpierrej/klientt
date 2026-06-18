@@ -12,15 +12,11 @@ import com.sharcky.klientt.busca.job.JobResultado;
 import com.sharcky.klientt.busca.job.JobResultadoRepository;
 import com.sharcky.klientt.busca.job.JobService;
 import com.sharcky.klientt.busca.mapper.LeadMapper;
-import com.sharcky.klientt.busca.scoring.AvaliacaoLead;
-import com.sharcky.klientt.busca.scoring.AvaliadorLead;
 import com.sharcky.klientt.conta.service.QuotaExcedidaException;
 import com.sharcky.klientt.conta.service.QuotaService;
 import com.sharcky.klientt.empresa.model.Contato;
 import com.sharcky.klientt.empresa.model.Empresa;
 import com.sharcky.klientt.empresa.repository.EmpresaRepository;
-
-import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -28,11 +24,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,7 +39,6 @@ class BuscaServiceImplTest {
     @Mock FonteCnpjExecutor fonteCnpjExecutor;
     @Mock JobResultadoRepository jobResultadoRepository;
     @Mock EmpresaRepository empresaRepository;
-    @Mock AvaliadorLead avaliador;
     @Mock LeadMapper leadMapper;
     @Mock com.sharcky.klientt.busca.mapper.LeadDetalheMapper detalheMapper;
     @InjectMocks BuscaServiceImpl buscaService;
@@ -60,7 +55,7 @@ class BuscaServiceImplTest {
         InOrder inOrder = inOrder(quotaService, jobService, fonteCnpjExecutor);
         inOrder.verify(quotaService).garantirDisponibilidade(1L);
         inOrder.verify(jobService).criar(request, 1L);
-        inOrder.verify(fonteCnpjExecutor).executar(7L, TipoBusca.NICHO, "bares", "Lisboa");  // fonte primária
+        inOrder.verify(fonteCnpjExecutor).executar(7L, TipoBusca.NICHO, "bares", "Lisboa", null);
     }
 
     @Test
@@ -71,7 +66,7 @@ class BuscaServiceImplTest {
                 .isInstanceOf(QuotaExcedidaException.class);
 
         verify(jobService, never()).criar(any(), any());
-        verify(fonteCnpjExecutor, never()).executar(any(), any(), any(), any());
+        verify(fonteCnpjExecutor, never()).executar(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -111,21 +106,11 @@ class BuscaServiceImplTest {
     }
 
     @Test
-    void filtrarSemSiteDevolveApenasSemSite() {
-        prepararDoisLeads();
-
-        List<LeadResponse> leads = buscaService.filtrar(5L, 1L,
-                new FiltroBusca(null, true, false, false, false, false));
-
-        assertThat(leads).extracting(LeadResponse::nome).containsExactly("Alfa");
-    }
-
-    @Test
     void filtrarOrdenarPorNome() {
         prepararDoisLeads();
 
         List<LeadResponse> leads = buscaService.filtrar(5L, 1L,
-                new FiltroBusca(OrdenarPor.NOME, false, false, false, false, false));
+                new FiltroBusca(OrdenarPor.NOME, false));
 
         assertThat(leads).extracting(LeadResponse::nome).containsExactly("Alfa", "Beta");
     }
@@ -135,12 +120,12 @@ class BuscaServiceImplTest {
         prepararDoisLeads();   // só "Alfa" tem contato
 
         List<LeadResponse> leads = buscaService.filtrar(5L, 1L,
-                new FiltroBusca(null, false, false, false, false, true));
+                new FiltroBusca(null, true));
 
         assertThat(leads).extracting(LeadResponse::nome).containsExactly("Alfa");
     }
 
-    /** Job concluído do utilizador 1 com 2 leads: "Alfa" (sem site) e "Beta" (com site). */
+    /** Job concluído do utilizador 1 com 2 leads: "Alfa" (contactável) e "Beta" (sem contato). */
     private void prepararDoisLeads() {
         JobBusca job = new JobBusca();
         job.setUtilizadorId(1L);
@@ -158,15 +143,12 @@ class BuscaServiceImplTest {
         e11.setId(11L);
         e11.setNome("Beta");
         when(jobResultadoRepository.findByJobId(5L))
-                .thenReturn(List.of(new JobResultado(5L, 10L, 60), new JobResultado(5L, 11L, 0)));
+                .thenReturn(List.of(new JobResultado(5L, 10L), new JobResultado(5L, 11L)));
         when(empresaRepository.findAllById(any())).thenReturn(List.of(e10, e11));
 
-        // Alfa = sem site; Beta = com site (a filtragem opera sobre a avaliação).
-        when(avaliador.avaliar(e10)).thenReturn(new AvaliacaoLead(3.0, false, false, 100, true, false, 60));
-        when(avaliador.avaliar(e11)).thenReturn(new AvaliacaoLead(4.5, true, false, 9000, true, false, 0));
-        LeadResponse alfa = new LeadResponse(10L, "Alfa", "Lx", 3.0, false, false, 100, false, true, 60);
-        LeadResponse beta = new LeadResponse(11L, "Beta", "Lx", 4.5, true, false, 9000, false, false, 0);
-        lenient().when(leadMapper.toResponse(eq(e10), any())).thenReturn(alfa);
-        lenient().when(leadMapper.toResponse(eq(e11), any())).thenReturn(beta);
+        LeadResponse alfa = new LeadResponse(10L, "Alfa", "Lx", null, "+351910000000", null, null, true);
+        LeadResponse beta = new LeadResponse(11L, "Beta", "Lx", null, null, null, null, false);
+        lenient().when(leadMapper.toResponse(e10)).thenReturn(alfa);
+        lenient().when(leadMapper.toResponse(e11)).thenReturn(beta);
     }
 }

@@ -1,7 +1,7 @@
 package com.sharcky.klientt.busca.web;
 
+import com.sharcky.klientt.busca.dto.ContatoView;
 import com.sharcky.klientt.busca.dto.LeadDetalhe;
-import com.sharcky.klientt.busca.dto.RedeView;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -17,9 +17,9 @@ public class LeadCsvWriter {
 
     private static final char SEP = ';';
     private static final String[] CABECALHO = {
-            "Nome", "Cidade", "CNPJ", "Telefone", "Email", "Contactável", "Endereço", "Website",
-            "Nota Google", "Avaliações", "Tem Site", "Velocidade (ms)", "HTTPS",
-            "Nº Páginas", "Reputação", "Seguidores", "Procon Evite", "Score", "Redes"
+            "Nome", "Cidade", "CNPJ", "Telefone", "Email", "Contactável", "Endereço",
+            "Razão Social", "Nome Fantasia", "Situação", "Abertura", "Porte",
+            "Natureza Jurídica", "CNAE", "Capital Social", "Contatos"
     };
 
     public byte[] escrever(List<LeadDetalhe> leads) {
@@ -35,18 +35,15 @@ public class LeadCsvWriter {
                     l.email(),
                     l.contactavel() ? "Sim" : "Não",
                     l.endereco(),
-                    l.website(),
-                    texto(l.notaGoogle()),
-                    texto(l.numReviews()),
-                    simNao(l.siteExiste()),
-                    texto(l.siteVelocidadeMs()),
-                    simNao(l.siteHttps()),
-                    texto(l.siteNumPaginas()),
-                    l.siteReputacao(),
-                    String.valueOf(totalSeguidores(l)),
-                    l.proconEviteSite() ? "Sim" : "Não",
-                    String.valueOf(l.score()),
-                    redes(l));
+                    l.razaoSocial(),
+                    l.nomeFantasia(),
+                    l.situacaoCadastral(),
+                    texto(l.dataAbertura()),
+                    l.porte(),
+                    l.naturezaJuridica(),
+                    l.cnaePrincipal(),
+                    texto(l.capitalSocial()),
+                    contatos(l));
         }
         return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
@@ -73,21 +70,13 @@ public class LeadCsvWriter {
         return o == null ? "" : String.valueOf(o);
     }
 
-    private String simNao(Boolean b) {
-        return b == null ? "" : (b ? "Sim" : "Não");
-    }
-
-    private int totalSeguidores(LeadDetalhe l) {
-        return l.redes().stream().mapToInt(r -> r.seguidores() != null ? r.seguidores() : 0).sum();
-    }
-
-    private String redes(LeadDetalhe l) {
-        return l.redes().stream()
-                .map(this::descreverRede)
+    private String contatos(LeadDetalhe l) {
+        return l.contatos().stream()
+                .map(this::descreverContato)
                 .collect(Collectors.joining(", "));
     }
 
-    private String descreverRede(RedeView r) {
-        return r.rede() + (r.seguidores() != null ? "(" + r.seguidores() + ")" : "");
+    private String descreverContato(ContatoView c) {
+        return c.tipo() + ": " + c.valor();
     }
 }

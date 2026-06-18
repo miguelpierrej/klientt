@@ -14,22 +14,10 @@ public interface JobService {
 
     Optional<JobBusca> obter(Long jobId);
 
-    /** Regista (ou atualiza) uma empresa encontrada para o job, com o seu score. */
-    void registarResultado(Long jobId, Long empresaId, int score);
+    /** Regista (ou atualiza) uma empresa encontrada para o job. */
+    void registarResultado(Long jobId, Long empresaId);
 
     void concluir(Long jobId);
-
-    /** (Legado) marca que uma fonte do fluxo de nicho terminou; conclui quando todas reportarem. */
-    void marcarFonteConcluida(Long jobId);
-
-    /**
-     * A descoberta (Casa dos Dados) terminou: regista quantos enriquecimentos Maps esperar.
-     * Conclui já o job se não houver enriquecimentos pendentes (PLANO-DUAL-FONTE.md, Fase 2).
-     */
-    void marcarDescobertaConcluida(Long jobId, int enriquecimentosEsperados);
-
-    /** Regista um enriquecimento Maps recebido; conclui o job quando todos chegarem. */
-    void registarEnriquecimento(Long jobId);
 
     void marcarErro(Long jobId);
 }

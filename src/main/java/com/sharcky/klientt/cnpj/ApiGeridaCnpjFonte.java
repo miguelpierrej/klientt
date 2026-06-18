@@ -3,8 +3,8 @@ package com.sharcky.klientt.cnpj;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sharcky.klientt.cnpj.config.ClienteCnpjProperties;
-import com.sharcky.klientt.scraper.dto.CadastraisPayload;
-import com.sharcky.klientt.scraper.dto.EmpresaPayload;
+import com.sharcky.klientt.cnpj.dto.CadastraisPayload;
+import com.sharcky.klientt.cnpj.dto.EmpresaPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -132,7 +132,7 @@ public class ApiGeridaCnpjFonte implements FonteCnpj {
         }
 
         return new EmpresaPayload(nome, e.cnpj(), primeiroTelefone(e), primeiroEmail(e),
-                endereco, cidade, null, lat, lng, "casadosdados", null, List.of(), cadastrais);
+                endereco, cidade, null, lat, lng, "casadosdados", cadastrais);
     }
 
     private static String primeiroTelefone(EmpresaCnpj e) {

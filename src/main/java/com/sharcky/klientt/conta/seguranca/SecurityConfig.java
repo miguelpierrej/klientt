@@ -14,9 +14,9 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        // Páginas públicas + webhooks (autenticados por token/assinatura próprios).
+                        // Páginas públicas + webhook do Stripe (autenticado por assinatura própria).
                         .requestMatchers("/login", "/registo", "/css/**", "/favicon.svg",
-                                "/api/scraper/**", "/api/stripe/**").permitAll()
+                                "/api/stripe/**").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form
                         .loginPage("/login")
@@ -25,8 +25,8 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutSuccessUrl("/login?logout")
                         .permitAll())
-                // Webhooks são chamados por serviços externos (sem sessão) → isentos de CSRF.
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/scraper/**", "/api/stripe/**"));
+                // O webhook do Stripe é chamado por serviço externo (sem sessão) → isento de CSRF.
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/stripe/**"));
         return http.build();
     }
 

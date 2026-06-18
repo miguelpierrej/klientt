@@ -14,13 +14,13 @@
     <div class="busca-loader" role="status" aria-live="polite">
         <div class="loader-spinner" aria-hidden="true"></div>
         <div class="loader-corpo">
-            <p class="loader-titulo">A montar a sua lista de oportunidades…</p>
+            <p class="loader-titulo">A montar a sua lista de empresas…</p>
             <ul class="loader-fases" id="loader-fases">
-                <li data-fase="0">A procurar empresas no Google Maps</li>
-                <li data-fase="1">A analisar sites, redes sociais e reputação</li>
-                <li data-fase="2">A calcular o score e a ordenar os melhores leads</li>
+                <li data-fase="0">A consultar a base de empresas</li>
+                <li data-fase="1">A reunir contactos (telefone e email)</li>
+                <li data-fase="2">A organizar a sua lista</li>
             </ul>
-            <p class="loader-dica" id="loader-dica">Estamos a recolher tudo — isto costuma valer a espera.</p>
+            <p class="loader-dica" id="loader-dica">Estamos a recolher tudo — isto costuma ser rápido.</p>
         </div>
     </div>
 
@@ -33,11 +33,7 @@
                 <div class="sinais">
                     <span class="skel skel-tag"></span>
                     <span class="skel skel-tag"></span>
-                    <span class="skel skel-tag"></span>
                 </div>
-            </div>
-            <div class="lead-score">
-                <div class="skel skel-score"></div>
             </div>
         </li>
     </ul>
@@ -58,10 +54,9 @@
                 li.classList.toggle('feita', f < fase);
             });
             var dicas = [
-                'Sabia que? Empresas sem site costumam ter o maior score de oportunidade.',
-                'A analisar a velocidade dos sites — sites lentos são um sinal forte.',
-                'A cruzar redes sociais e reputação para priorizar os melhores leads.',
-                'Quase lá — a ordenar tudo por score para si.'
+                'A procurar empresas formais do segmento na sua região.',
+                'A reunir os contactos diretos de cada empresa.',
+                'Quase lá — a organizar a sua lista de contactos.'
             ];
             var dica = document.getElementById('loader-dica');
             if (dica) { dica.textContent = dicas[Math.floor(seg / 4) % dicas.length]; }
@@ -87,7 +82,7 @@
 <div th:fragment="lista">
     <div class="resultados-cabecalho">
         <h2>Resultados para &laquo;<span th:text="${termo}">termo</span>&raquo;</h2>
-        <p class="ajuda">Filtre e ordene à esquerda. Clique num lead para ver tudo.</p>
+        <p class="ajuda">Filtre e ordene à esquerda. Clique numa empresa para ver tudo.</p>
     </div>
 
     <form class="filtros"
@@ -95,16 +90,12 @@
           hx-target="#leads-container" hx-swap="innerHTML" hx-trigger="change">
         <label class="filtro-ordenar">Ordenar por
             <select name="ordenar">
-                <option value="SCORE">Score (maior)</option>
-                <option value="NOTA">Nota (menor primeiro)</option>
-                <option value="SEGUIDORES">Seguidores (menos)</option>
+                <option value="RELEVANCIA">Relevância</option>
+                <option value="RECENTE">Mais recentes</option>
                 <option value="NOME">Nome (A–Z)</option>
             </select>
         </label>
-        <label class="check"><input type="checkbox" name="semSite" value="true"> Sem site</label>
-        <label class="check"><input type="checkbox" name="notaBaixa" value="true"> Nota &lt; 4</label>
-        <label class="check"><input type="checkbox" name="poucosSeguidores" value="true"> &lt; 500 seg.</label>
-        <label class="check"><input type="checkbox" name="procon" value="true"> No Procon</label>
+        <label class="check"><input type="checkbox" name="comContato" value="true"> Só com contato</label>
         <button type="button" class="btn-export" th:attr="onclick=|exportarLeads(${jobId})|">
             <svg th:replace="~{fragments/icones :: download}"></svg> Exportar CSV</button>
     </form>
@@ -128,25 +119,50 @@
                 <h3 th:text="${lead.nome()}">Nome</h3>
                 <p class="cidade" th:text="${lead.cidade()}">Cidade</p>
                 <div class="sinais">
-                    <span class="tag" th:classappend="${lead.notaGoogle() < 4.0} ? ' alerta' : ' ok'">
-                        <svg th:replace="~{fragments/icones :: estrela}"></svg> <span th:text="${lead.notaGoogle()}">0</span>
-                    </span>
-                    <span class="tag" th:classappend="${lead.temSite()} ? ' ok' : ' alerta'"
-                          th:text="${lead.temSite()} ? 'Tem site' : 'Sem site'">site</span>
-                    <span class="tag alerta" th:if="${lead.siteLento()}">Site lento</span>
-                    <span class="tag" th:classappend="${lead.seguidores() < 500} ? ' alerta' : ' ok'">
-                        <span th:text="${lead.seguidores()}">0</span> seguidores
-                    </span>
-                    <span class="tag perigo" th:if="${lead.proconEviteSite()}">
-                        <svg th:replace="~{fragments/icones :: alerta}"></svg> Procon: Evite Sites</span>
+                    <span class="tag" th:classappend="${lead.contactavel()} ? ' ok' : ' alerta'"
+                          th:text="${lead.contactavel()} ? 'Com contato' : 'Sem contato'">contato</span>
+                    <span class="tag" th:if="${lead.porte()}" th:text="${lead.porte()}">porte</span>
+                    <span class="tag" th:if="${lead.telefone()}" th:text="${lead.telefone()}">telefone</span>
                 </div>
-            </div>
-            <div class="lead-score">
-                <span class="score-num" th:text="${lead.score()}">0</span>
-                <span class="score-label">score</span>
             </div>
         </li>
     </ul>
+</div>
+
+<!-- Confirmação do CNAE (busca por nicho): escolher a atividade antes de buscar -->
+<div th:fragment="confirmar-cnae" class="confirmar-cnae">
+    <div class="resultados-cabecalho">
+        <h2>Qual atividade procura?</h2>
+        <p class="ajuda">Confirme o CNAE para &laquo;<span th:text="${termo}">termo</span>&raquo;.
+            Isto afina a busca e evita resultados de outro ramo.</p>
+    </div>
+
+    <form class="cnae-form"
+          hx-post="/buscar" hx-target="#resultados" hx-swap="innerHTML">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="hidden" name="tipo" value="NICHO"/>
+        <input type="hidden" name="termo" th:value="${termo}"/>
+        <input type="hidden" name="regiao" th:value="${regiao}"/>
+
+        <ul class="cnae-opcoes" th:unless="${#lists.isEmpty(candidatos)}">
+            <li th:each="c,it : ${candidatos}">
+                <label>
+                    <input type="radio" name="cnae" th:value="${c.codigo()}" th:checked="${it.index == 0}"/>
+                    <span th:text="${c.descricao()}">descrição</span>
+                    <span class="ajuda" th:text="${c.codigo()}">código</span>
+                </label>
+            </li>
+        </ul>
+
+        <p class="vazio" th:if="${#lists.isEmpty(candidatos)}">
+            Não encontrámos uma atividade para esse termo. Indique o código CNAE manualmente.</p>
+
+        <label class="cnae-manual">Outro código CNAE
+            <input type="text" name="cnaeOutro" placeholder="ex.: 9602-5/01"/>
+        </label>
+
+        <button type="submit" class="btn">Confirmar e buscar</button>
+    </form>
 </div>
 
 <!-- Fragmento de erro (validação / falha) -->

@@ -1,9 +1,8 @@
-package com.sharcky.klientt.scraper.dto;
-
-import java.util.List;
+package com.sharcky.klientt.cnpj.dto;
 
 /**
- * Uma empresa devolvida pelo scraper no callback (CONTRATO-SCRAPER.md §3).
+ * Uma empresa devolvida pela fonte de descoberta (Casa dos Dados). Carrega os cadastrais e os
+ * contactos da Receita; é o DTO de entrada da ingestão.
  */
 public record EmpresaPayload(
         String nome,
@@ -16,8 +15,6 @@ public record EmpresaPayload(
         Double lat,
         Double lng,
         String fonte,
-        SinaisPayload sinais,
-        List<RedePayload> redes,
         CadastraisPayload cadastrais
 ) {
 }

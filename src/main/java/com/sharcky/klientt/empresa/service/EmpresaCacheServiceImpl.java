@@ -2,28 +2,23 @@ package com.sharcky.klientt.empresa.service;
 
 import com.sharcky.klientt.empresa.model.Contato;
 import com.sharcky.klientt.empresa.model.Empresa;
-import com.sharcky.klientt.empresa.model.EmpresaRede;
-import com.sharcky.klientt.empresa.model.Sinais;
 import com.sharcky.klientt.empresa.repository.EmpresaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 /**
- * Cache de empresas com identidade por CNPJ e merge campo-a-campo (PLANO-DUAL-FONTE.md, Fase B).
+ * Cache de empresas com identidade por CNPJ e merge campo-a-campo.
  *
- * <p>Identidade: CNPJ (só dígitos) quando existe; fallback nome+cidade. Como as duas fontes
- * (Maps + CNPJ-por-CNAE) alimentam o mesmo lead, o merge é <b>não-destrutivo</b>: um valor nulo
- * de uma fonte nunca apaga o que a outra já trouxe (a Receita dá email/cadastrais, o Maps dá
- * nota/site/redes). Quando ambos têm valor, o fresco (recoleta) prevalece.
+ * <p>Identidade: CNPJ (só dígitos) quando existe; fallback nome+cidade. O merge é
+ * <b>não-destrutivo</b>: um valor nulo nunca apaga o que já existia; quando ambos têm valor, o
+ * fresco (recoleta) prevalece. Os contactos (telefone/email) são unidos por (tipo, valor).
  */
 @Service
 public class EmpresaCacheServiceImpl implements EmpresaCacheService {
@@ -86,8 +81,6 @@ public class EmpresaCacheServiceImpl implements EmpresaCacheService {
 
         alvo.setAtualizadoEm(LocalDateTime.now());
 
-        fundirSinais(alvo, fresca.getSinais());
-        fundirRedes(alvo, fresca);
         fundirContatos(alvo, fresca);
     }
 
@@ -126,49 +119,6 @@ public class EmpresaCacheServiceImpl implements EmpresaCacheService {
     private static String chaveContato(String tipo, String valor) {
         return (tipo == null ? "" : tipo.toLowerCase()) + "|"
                 + (valor == null ? "" : valor.trim().toLowerCase());
-    }
-
-    /** Merge dos sinais: preenche nulos sem apagar; Procon é OR (qualquer fonte que flague mantém). */
-    private void fundirSinais(Empresa alvo, Sinais fresca) {
-        if (fresca == null) {
-            return;
-        }
-        Sinais atual = alvo.getSinais();
-        if (atual == null) {
-            alvo.definirSinais(fresca);
-            return;
-        }
-        atual.setNotaGoogle(coalesce(fresca.getNotaGoogle(), atual.getNotaGoogle()));
-        atual.setNumReviews(coalesce(fresca.getNumReviews(), atual.getNumReviews()));
-        atual.setSiteExiste(coalesce(fresca.getSiteExiste(), atual.getSiteExiste()));
-        atual.setSiteVelocidadeMs(coalesce(fresca.getSiteVelocidadeMs(), atual.getSiteVelocidadeMs()));
-        atual.setSiteHttps(coalesce(fresca.getSiteHttps(), atual.getSiteHttps()));
-        atual.setSiteNumPaginas(coalesce(fresca.getSiteNumPaginas(), atual.getSiteNumPaginas()));
-        atual.setSiteReputacao(coalesce(fresca.getSiteReputacao(), atual.getSiteReputacao()));
-        atual.setProconEviteSite(atual.isProconEviteSite() || fresca.isProconEviteSite());
-        atual.setColetadoEm(LocalDateTime.now());
-    }
-
-    /** União das redes por (rede, url); para uma rede já existente, atualiza seguidores se vierem. */
-    private void fundirRedes(Empresa alvo, Empresa fresca) {
-        Map<String, EmpresaRede> existentes = new HashMap<>();
-        for (EmpresaRede r : alvo.getRedes()) {
-            existentes.put(chaveRede(r), r);
-        }
-        for (EmpresaRede nova : fresca.getRedes()) {
-            EmpresaRede atual = existentes.get(chaveRede(nova));
-            if (atual == null) {
-                alvo.adicionarRede(nova);
-            } else if (nova.getSeguidores() != null) {
-                atual.setSeguidores(nova.getSeguidores());
-            }
-        }
-    }
-
-    private static String chaveRede(EmpresaRede r) {
-        String rede = r.getRede() == null ? "" : r.getRede().toLowerCase();
-        String url = r.getUrl() == null ? "" : r.getUrl().toLowerCase();
-        return rede + "|" + url;
     }
 
     private static <T> T coalesce(T fresco, T existente) {

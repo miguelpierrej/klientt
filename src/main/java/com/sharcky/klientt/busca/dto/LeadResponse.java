@@ -8,12 +8,10 @@ public record LeadResponse(
         Long id,
         String nome,
         String cidade,
-        double notaGoogle,
-        boolean temSite,
-        boolean siteLento,
-        int seguidores,
-        boolean proconEviteSite,
-        boolean contactavel,
-        int score
+        String cnpj,
+        String telefone,
+        String email,
+        String porte,
+        boolean contactavel
 ) {
 }

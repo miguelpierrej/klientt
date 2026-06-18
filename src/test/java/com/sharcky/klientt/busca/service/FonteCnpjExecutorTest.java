@@ -6,9 +6,7 @@ import com.sharcky.klientt.cnae.Cnae;
 import com.sharcky.klientt.cnae.ResolvedorCnae;
 import com.sharcky.klientt.cnpj.FonteCnpj;
 import com.sharcky.klientt.cnpj.config.ClienteCnpjProperties;
-import com.sharcky.klientt.enriquecimento.client.EnriquecimentoClient;
-import com.sharcky.klientt.scraper.config.ScraperProperties;
-import com.sharcky.klientt.scraper.dto.EmpresaPayload;
+import com.sharcky.klientt.cnpj.dto.EmpresaPayload;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,25 +27,34 @@ class FonteCnpjExecutorTest {
     @Mock IngestaoService ingestaoService;
     @Mock JobService jobService;
     @Mock ClienteCnpjProperties properties;
-    @Mock EnriquecimentoClient enriquecimentoClient;
-    @Mock ScraperProperties scraperProperties;
     @InjectMocks FonteCnpjExecutor executor;
 
     private final List<EmpresaPayload> empresas = List.of(new EmpresaPayload(
             "Barbearia X", "12345678000199", null, null, null, "São Paulo", null, null, null,
-            "casadosdados", null, List.of(), null));
+            "casadosdados", null));
 
     @Test
-    void nichoIngereDisparaEnriquecimentoEMarcaDescoberta() {
+    void nichoComCnaeConfirmadoBuscaDiretoSemResolver() {
+        when(properties.getLimiteDefault()).thenReturn(25);
+        when(fonteCnpj.buscarPorCnae("9602501", "São Paulo", 25)).thenReturn(empresas);
+
+        executor.executar(7L, TipoBusca.NICHO, "barbearias", "São Paulo", "9602501");
+
+        verify(ingestaoService).ingerir(empresas, 7L);
+        verify(resolvedorCnae, never()).resolver(any());   // CNAE já confirmado
+        verify(jobService).concluir(7L);
+    }
+
+    @Test
+    void nichoSemCnaeUsaResolverComoFallback() {
         when(properties.getLimiteDefault()).thenReturn(25);
         when(resolvedorCnae.resolver("barbearias")).thenReturn(List.of(new Cnae("9602-5/01", "Cabeleireiros")));
         when(fonteCnpj.buscarPorCnae("9602-5/01", "São Paulo", 25)).thenReturn(empresas);
 
-        executor.executar(7L, TipoBusca.NICHO, "barbearias", "São Paulo");
+        executor.executar(7L, TipoBusca.NICHO, "barbearias", "São Paulo", null);
 
         verify(ingestaoService).ingerir(empresas, 7L);
-        verify(enriquecimentoClient).enriquecer(any());                  // 1 empresa com CNPJ
-        verify(jobService).marcarDescobertaConcluida(7L, 1);             // 1 enriquecimento esperado
+        verify(jobService).concluir(7L);
     }
 
     @Test
@@ -55,33 +62,31 @@ class FonteCnpjExecutorTest {
         when(properties.getLimiteDefault()).thenReturn(25);
         when(fonteCnpj.buscarPorNome("Barbearia do Zé", "São Paulo", 25)).thenReturn(empresas);
 
-        executor.executar(7L, TipoBusca.NOME, "Barbearia do Zé", "São Paulo");
+        executor.executar(7L, TipoBusca.NOME, "Barbearia do Zé", "São Paulo", null);
 
         verify(ingestaoService).ingerir(empresas, 7L);
         verify(resolvedorCnae, never()).resolver(any());
-        verify(jobService).marcarDescobertaConcluida(7L, 1);
+        verify(jobService).concluir(7L);
     }
 
     @Test
-    void nichoSemCnaeResolvidoMarcaDescobertaComZero() {
+    void nichoSemCnaeResolvidoNaoBuscaMasConclui() {
         when(properties.getLimiteDefault()).thenReturn(25);
         when(resolvedorCnae.resolver("nicho desconhecido")).thenReturn(List.of());
 
-        executor.executar(7L, TipoBusca.NICHO, "nicho desconhecido", "São Paulo");
+        executor.executar(7L, TipoBusca.NICHO, "nicho desconhecido", "São Paulo", null);
 
         verify(fonteCnpj, never()).buscarPorCnae(any(), any(), anyInt());
-        verify(enriquecimentoClient, never()).enriquecer(any());
-        verify(jobService).marcarDescobertaConcluida(7L, 0);   // sem empresas → conclui já
+        verify(jobService).concluir(7L);
     }
 
     @Test
-    void marcaDescobertaMesmoComErro() {
+    void concluiMesmoComErro() {
         when(properties.getLimiteDefault()).thenReturn(25);
-        when(resolvedorCnae.resolver("barbearias")).thenReturn(List.of(new Cnae("9602-5/01", "Cabeleireiros")));
         when(fonteCnpj.buscarPorCnae(any(), any(), anyInt())).thenThrow(new RuntimeException("API caiu"));
 
-        executor.executar(7L, TipoBusca.NICHO, "barbearias", "São Paulo");
+        executor.executar(7L, TipoBusca.NICHO, "barbearias", "São Paulo", "9602501");
 
-        verify(jobService).marcarDescobertaConcluida(7L, 0);   // falha graciosa
+        verify(jobService).concluir(7L);   // falha graciosa
     }
 }

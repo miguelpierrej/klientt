@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,9 +27,13 @@ public class ResolvedorCnaeImpl implements ResolvedorCnae {
     /** Sinónimos coloquiais → código CNAE (o catálogo dá a descrição oficial). */
     private static final Map<String, String> SINONIMOS = sinonimos();
 
+    /** Nº máximo de candidatos a propor ao utilizador na confirmação do CNAE. */
+    private static final int MAX_CANDIDATOS = 6;
+
     private final Optional<TradutorCnaeLlm> tradutor;
     private final CnaeCatalogoRepository catalogoRepository;
     private final Map<String, List<Cnae>> cache = new ConcurrentHashMap<>();
+    private final Map<String, List<Cnae>> candidatosCache = new ConcurrentHashMap<>();
 
     /** Índice em memória do catálogo (carregado lazy na 1ª resolução). */
     private volatile List<Entrada> indice;
@@ -70,6 +75,72 @@ public class ResolvedorCnaeImpl implements ResolvedorCnae {
                         .limit(1)
                         .toList())
                 .orElseGet(List::of));
+    }
+
+    @Override
+    public List<Cnae> candidatos(String termo) {
+        if (termo == null || termo.isBlank()) {
+            return List.of();
+        }
+        String alvo = normalizar(termo);
+        return candidatosCache.computeIfAbsent(alvo, k -> montarCandidatos(termo, alvo));
+    }
+
+    /** Junta sinónimos + sugestão do LLM + correspondências do catálogo, deduplicado por código. */
+    private List<Cnae> montarCandidatos(String termo, String alvo) {
+        LinkedHashMap<String, Cnae> porCodigo = new LinkedHashMap<>();
+
+        // 1) sinónimos coloquiais (alta confiança).
+        for (Map.Entry<String, String> s : SINONIMOS.entrySet()) {
+            if (alvo.contains(s.getKey())) {
+                adicionar(porCodigo, doCatalogo(s.getValue()));
+            }
+        }
+        // 2) sugestão do LLM (validada no catálogo).
+        tradutor.ifPresent(t -> t.traduzir(termo)
+                .forEach(c -> adicionar(porCodigo, doCatalogo(c.codigo()))));
+        // 3) correspondências por descrição (top-N).
+        for (Cnae c : candidatosPorDescricao(alvo, MAX_CANDIDATOS)) {
+            adicionar(porCodigo, c);
+        }
+        return porCodigo.values().stream().limit(MAX_CANDIDATOS).toList();
+    }
+
+    private static void adicionar(LinkedHashMap<String, Cnae> mapa, Cnae c) {
+        if (c != null) {
+            mapa.putIfAbsent(c.codigo(), c);
+        }
+    }
+
+    /** Entradas do catálogo ordenadas por nº de palavras do termo na descrição (depois mais curta). */
+    private List<Cnae> candidatosPorDescricao(String alvo, int limite) {
+        List<String> tokens = Arrays.stream(alvo.split("[^a-z0-9]+"))
+                .filter(t -> t.length() >= 3)
+                .distinct()
+                .toList();
+        if (tokens.isEmpty()) {
+            return List.of();
+        }
+        record Pontuada(Entrada entrada, int score) {
+        }
+        List<Pontuada> pontuadas = new ArrayList<>();
+        for (Entrada e : indice()) {
+            int score = 0;
+            for (String t : tokens) {
+                if (e.descricaoNorm().contains(t)) {
+                    score++;
+                }
+            }
+            if (score >= 1) {
+                pontuadas.add(new Pontuada(e, score));
+            }
+        }
+        pontuadas.sort(Comparator.comparingInt((Pontuada p) -> p.score()).reversed()
+                .thenComparingInt(p -> p.entrada().descricao().length()));
+        return pontuadas.stream()
+                .limit(limite)
+                .map(p -> new Cnae(p.entrada().codigo(), p.entrada().descricao()))
+                .toList();
     }
 
     /** Melhor entrada do catálogo por nº de palavras do termo presentes na descrição. */

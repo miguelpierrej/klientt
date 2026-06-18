@@ -12,11 +12,8 @@
             <h2 th:text="${lead.nome()}">Nome</h2>
             <p class="modal-sub">
                 <span th:text="${lead.cidade()} ?: 'Cidade não informada'">cidade</span>
-                · score <strong th:text="${lead.score()}">0</strong>
                 <span class="tag ok" th:if="${lead.contactavel()}">Com contato</span>
-                <span class="tag alerta" th:if="${lead.confirmadoMaps() == false}">Não confirmado no Maps</span>
-                <span class="tag perigo" th:if="${lead.proconEviteSite()}">
-                    <svg th:replace="~{fragments/icones :: alerta}"></svg> Procon: Evite Sites</span>
+                <span class="tag alerta" th:unless="${lead.contactavel()}">Sem contato</span>
             </p>
         </header>
 
@@ -31,11 +28,6 @@
                     <span th:unless="${lead.email()}">—</span>
                 </dd>
                 <dt>Morada</dt><dd th:text="${lead.endereco()} ?: '—'">—</dd>
-                <dt th:if="${lead.enderecoMaps()}">Morada (Maps)</dt>
-                <dd th:if="${lead.enderecoMaps()}">
-                    <span th:text="${lead.enderecoMaps()}">—</span>
-                    <span class="tag alerta" th:if="${lead.enderecoDivergente()}">endereço divergente</span>
-                </dd>
                 <dt>CNPJ</dt><dd th:text="${lead.cnpj()} ?: '—'">—</dd>
                 <dt>Website</dt>
                 <dd>
@@ -45,12 +37,11 @@
                 </dd>
             </dl>
 
-            <!-- Meios de contacto recolhidos (com origem) -->
+            <!-- Meios de contacto recolhidos -->
             <ul class="modal-contatos" th:unless="${#lists.isEmpty(lead.contatos())}">
                 <li th:each="c : ${lead.contatos()}">
                     <span class="rede-nome" th:text="${c.tipo()}">tipo</span>
                     <span th:text="${c.valor()}">valor</span>
-                    <span class="ajuda" th:if="${c.fonte()}" th:text="'(' + ${c.fonte()} + ')'">(fonte)</span>
                 </li>
             </ul>
         </section>
@@ -79,41 +70,6 @@
                     <span th:unless="${lead.optanteSimples() or lead.optanteMei()}">—</span>
                 </dd>
             </dl>
-        </section>
-
-        <section class="modal-seccao">
-            <h3>Sinais do site &amp; Google</h3>
-            <dl>
-                <dt>Nota Google</dt>
-                <dd>
-                    <span th:if="${lead.notaGoogle() != null}">
-                        <span th:text="${lead.notaGoogle()}">0</span>
-                        <svg th:replace="~{fragments/icones :: estrela}"></svg>
-                    </span>
-                    <span th:unless="${lead.notaGoogle() != null}">—</span>
-                </dd>
-                <dt>Avaliações</dt><dd th:text="${lead.numReviews()} ?: '—'">—</dd>
-                <dt>Tem site</dt>
-                <dd th:text="${lead.siteExiste() == null ? '—' : (lead.siteExiste() ? 'Sim' : 'Não')}">—</dd>
-                <dt>Velocidade</dt>
-                <dd th:text="${lead.siteVelocidadeMs() != null ? lead.siteVelocidadeMs() + ' ms' : '—'}">—</dd>
-                <dt>HTTPS</dt>
-                <dd th:text="${lead.siteHttps() == null ? '—' : (lead.siteHttps() ? 'Sim' : 'Não')}">—</dd>
-                <dt>Nº de páginas</dt><dd th:text="${lead.siteNumPaginas()} ?: '—'">—</dd>
-                <dt>Reputação</dt><dd th:text="${lead.siteReputacao()} ?: '—'">—</dd>
-            </dl>
-        </section>
-
-        <section class="modal-seccao">
-            <h3>Redes sociais</h3>
-            <p class="vazio" th:if="${#lists.isEmpty(lead.redes())}">Sem redes detetadas.</p>
-            <ul class="modal-redes" th:unless="${#lists.isEmpty(lead.redes())}">
-                <li th:each="r : ${lead.redes()}">
-                    <span class="rede-nome" th:text="${r.rede()}">rede</span>
-                    <a th:if="${r.url()}" th:href="${r.url()}" target="_blank" rel="noopener">abrir</a>
-                    <span class="rede-seg"><strong th:text="${r.seguidores()} ?: '—'">0</strong> seguidores</span>
-                </li>
-            </ul>
         </section>
 
         <footer class="modal-rodape">
