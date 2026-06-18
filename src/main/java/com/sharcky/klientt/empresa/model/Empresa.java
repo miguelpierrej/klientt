@@ -48,9 +48,6 @@ public class Empresa {
     private Double lat;
     private Double lng;
 
-    @Column(length = 50)
-    private String fonte;
-
     // --- Dados cadastrais (CNPJ / Receita) ---
     @Column(name = "razao_social", length = 255)
     private String razaoSocial;

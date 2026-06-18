@@ -31,7 +31,7 @@ class FonteCnpjExecutorTest {
 
     private final List<EmpresaPayload> empresas = List.of(new EmpresaPayload(
             "Barbearia X", "12345678000199", null, null, null, "São Paulo", null, null, null,
-            "casadosdados", null));
+            null, List.of(), List.of()));
 
     @Test
     void nichoComCnaeConfirmadoBuscaDiretoSemResolver() {

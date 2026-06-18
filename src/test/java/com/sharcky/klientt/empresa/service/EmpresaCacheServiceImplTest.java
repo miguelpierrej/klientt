@@ -103,7 +103,6 @@ class EmpresaCacheServiceImplTest {
         Empresa fresca = empresa("Bar X", "Lisboa");
         fresca.setTelefone("+351910000000");
         fresca.setEmail("contato@barx.test");
-        fresca.setFonte("casadosdados");
 
         Empresa salva = cache.upsert(fresca);
 
@@ -113,12 +112,25 @@ class EmpresaCacheServiceImplTest {
     }
 
     @Test
+    void contatosJaMapeadosSaoPreservados() {
+        when(repository.findFirstByNomeIgnoreCaseAndCidadeIgnoreCase(any(), any())).thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // Empresa já com vários contactos (como vêm da descoberta/mapper).
+        Empresa fresca = empresa("Bar X", "Lisboa");
+        fresca.adicionarContato(contato("telefone", "+351910000000"));
+        fresca.adicionarContato(contato("telefone", "+351920000000"));
+        fresca.adicionarContato(contato("email", "a@barx.test"));
+
+        Empresa salva = cache.upsert(fresca);
+
+        assertThat(salva.getContatos()).hasSize(3);   // não re-deriva nem perde nenhum
+    }
+
+    @Test
     void contatosFazemUniaoSemDuplicar() {
         Empresa existente = empresa("Bar X", "Lisboa");      // já tinha telefone
-        Contato tel = new Contato();
-        tel.setTipo("telefone");
-        tel.setValor("+351910000000");
-        existente.adicionarContato(tel);
+        existente.adicionarContato(contato("telefone", "+351910000000"));
         when(repository.findFirstByNomeIgnoreCaseAndCidadeIgnoreCase("Bar X", "Lisboa"))
                 .thenReturn(Optional.of(existente));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -131,6 +143,13 @@ class EmpresaCacheServiceImplTest {
 
         assertThat(fundida.getContatos()).extracting(Contato::getTipo)
                 .containsExactlyInAnyOrder("telefone", "email");   // telefone não duplicou
+    }
+
+    private Contato contato(String tipo, String valor) {
+        Contato c = new Contato();
+        c.setTipo(tipo);
+        c.setValor(valor);
+        return c;
     }
 
     private Empresa empresa(String nome, String cidade) {

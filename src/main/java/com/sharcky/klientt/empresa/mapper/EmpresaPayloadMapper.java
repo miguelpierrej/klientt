@@ -1,13 +1,18 @@
 package com.sharcky.klientt.empresa.mapper;
 
 import com.sharcky.klientt.cnpj.dto.EmpresaPayload;
+import com.sharcky.klientt.empresa.model.Contato;
 import com.sharcky.klientt.empresa.model.Empresa;
+import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+
+import java.util.List;
 
 /**
- * Converte o payload da descoberta (Casa dos Dados) na entidade {@link Empresa}.
- * Os contactos são derivados na cache (telefone/email → tabela contatos).
+ * Converte o payload da descoberta (Casa dos Dados) na entidade {@link Empresa}, incluindo
+ * <b>todos</b> os contactos (telefones/emails) na tabela {@code contatos}.
  */
 @Mapper(componentModel = "spring")
 public interface EmpresaPayloadMapper {
@@ -26,4 +31,31 @@ public interface EmpresaPayloadMapper {
     @Mapping(target = "optanteSimples", source = "cadastrais.optanteSimples")
     @Mapping(target = "optanteMei", source = "cadastrais.optanteMei")
     Empresa toEmpresa(EmpresaPayload payload);
+
+    /** Acrescenta todos os telefones/emails como contactos (dedup por tipo+valor). */
+    @AfterMapping
+    default void preencherContatos(@MappingTarget Empresa empresa, EmpresaPayload payload) {
+        adicionarContatos(empresa, "telefone", payload.telefones());
+        adicionarContatos(empresa, "email", payload.emails());
+    }
+
+    private static void adicionarContatos(Empresa empresa, String tipo, List<String> valores) {
+        if (valores == null) {
+            return;
+        }
+        for (String valor : valores) {
+            if (valor == null || valor.isBlank() || jaTem(empresa, tipo, valor)) {
+                continue;
+            }
+            Contato c = new Contato();
+            c.setTipo(tipo);
+            c.setValor(valor.trim());
+            empresa.adicionarContato(c);
+        }
+    }
+
+    private static boolean jaTem(Empresa empresa, String tipo, String valor) {
+        return empresa.getContatos().stream().anyMatch(c ->
+                tipo.equalsIgnoreCase(c.getTipo()) && valor.trim().equalsIgnoreCase(c.getValor()));
+    }
 }

@@ -17,7 +17,6 @@ public record LeadDetalhe(
         String email,
         String endereco,
         String website,
-        String fonte,
         boolean contactavel,
         List<ContatoView> contatos,
         LocalDateTime atualizadoEm,

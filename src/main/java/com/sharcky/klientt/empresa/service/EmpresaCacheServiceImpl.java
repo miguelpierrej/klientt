@@ -52,7 +52,11 @@ public class EmpresaCacheServiceImpl implements EmpresaCacheService {
 
         fresca.setCnpj(cnpj);
         fresca.setAtualizadoEm(LocalDateTime.now());
-        contatosDe(fresca).forEach(fresca::adicionarContato);
+        // Quando a fresca já traz contactos (mapeados da descoberta), mantém-nos; senão deriva do
+        // telefone/email diretos (seed/legado).
+        if (fresca.getContatos().isEmpty()) {
+            derivarDeScalar(fresca).forEach(fresca::adicionarContato);
+        }
         return empresaRepository.save(fresca);
     }
 
@@ -65,7 +69,6 @@ public class EmpresaCacheServiceImpl implements EmpresaCacheService {
         alvo.setWebsite(coalesce(fresca.getWebsite(), alvo.getWebsite()));
         alvo.setLat(coalesce(fresca.getLat(), alvo.getLat()));
         alvo.setLng(coalesce(fresca.getLng(), alvo.getLng()));
-        alvo.setFonte(coalesce(fresca.getFonte(), alvo.getFonte()));
 
         // Dados cadastrais (CNPJ / Receita)
         alvo.setRazaoSocial(coalesce(fresca.getRazaoSocial(), alvo.getRazaoSocial()));
@@ -84,35 +87,42 @@ public class EmpresaCacheServiceImpl implements EmpresaCacheService {
         fundirContatos(alvo, fresca);
     }
 
-    /** União dos contatos por (tipo, valor), trazendo a fonte de cada origem. */
+    /** União dos contatos da fresca nos do alvo, por (tipo, valor) — sem duplicar. */
     private void fundirContatos(Empresa alvo, Empresa fresca) {
         Set<String> existentes = new HashSet<>();
         for (Contato c : alvo.getContatos()) {
             existentes.add(chaveContato(c.getTipo(), c.getValor()));
         }
-        for (Contato novo : contatosDe(fresca)) {
+        for (Contato novo : contatosDaFresca(fresca)) {
             if (existentes.add(chaveContato(novo.getTipo(), novo.getValor()))) {
                 alvo.adicionarContato(novo);
             }
         }
     }
 
-    /** Deriva contatos diretos (telefone/email) dos campos da empresa fresca. */
-    private static List<Contato> contatosDe(Empresa e) {
+    /** Contactos a fundir: os já mapeados na fresca; senão deriva do telefone/email diretos. */
+    private static List<Contato> contatosDaFresca(Empresa fresca) {
+        if (!fresca.getContatos().isEmpty()) {
+            return new ArrayList<>(fresca.getContatos());
+        }
+        return derivarDeScalar(fresca);
+    }
+
+    /** Deriva contatos diretos (telefone/email) dos campos diretos da empresa (seed/legado). */
+    private static List<Contato> derivarDeScalar(Empresa e) {
         List<Contato> lista = new ArrayList<>();
-        adicionar(lista, "telefone", e.getTelefone(), e.getFonte());
-        adicionar(lista, "email", e.getEmail(), e.getFonte());
+        adicionar(lista, "telefone", e.getTelefone());
+        adicionar(lista, "email", e.getEmail());
         return lista;
     }
 
-    private static void adicionar(List<Contato> lista, String tipo, String valor, String fonte) {
+    private static void adicionar(List<Contato> lista, String tipo, String valor) {
         if (valor == null || valor.isBlank()) {
             return;
         }
         Contato c = new Contato();
         c.setTipo(tipo);
         c.setValor(valor.trim());
-        c.setFonte(fonte);
         lista.add(c);
     }
 

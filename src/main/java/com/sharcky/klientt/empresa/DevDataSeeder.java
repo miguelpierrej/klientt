@@ -57,7 +57,6 @@ public class DevDataSeeder implements ApplicationRunner {
         e.setDataAbertura(dataAbertura);
         e.setTelefone(telefone);
         e.setEmail(email);
-        e.setFonte("seed");
         if (telefone != null) {
             e.adicionarContato(contato("telefone", telefone));
         }
@@ -71,7 +70,6 @@ public class DevDataSeeder implements ApplicationRunner {
         Contato c = new Contato();
         c.setTipo(tipo);
         c.setValor(valor);
-        c.setFonte("seed");
         return c;
     }
 }

@@ -61,7 +61,8 @@ class ApiGeridaCnpjFonteTest {
             assertThat(e.telefone()).isEqualTo("11-55555555");
             assertThat(e.email()).isEqualTo("da43639@gmail.com");
             assertThat(e.cidade()).isEqualTo("SAO PAULO");
-            assertThat(e.fonte()).isEqualTo("casadosdados");
+            assertThat(e.telefones()).containsExactly("11-55555555");
+            assertThat(e.emails()).containsExactly("da43639@gmail.com");
             assertThat(e.cadastrais()).isNotNull();
             assertThat(e.cadastrais().razaoSocial()).isEqualTo("DANIELA CRISTINA DA SILVA ABREU 27002231871");
             assertThat(e.cadastrais().situacaoCadastral()).isEqualTo("ATIVA");

@@ -7,8 +7,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * Meio de contacto de uma empresa (PLANO-DUAL-FONTE.md, Fase C).
- * Vários por empresa, com origem ({@code fonte}) e confiança ({@code verificado}).
+ * Meio de contacto de uma empresa. Vários por empresa, com confiança ({@code verificado}).
  */
 @Entity
 @Table(name = "contatos")
@@ -29,9 +28,6 @@ public class Contato {
 
     @Column(nullable = false, length = 255)
     private String valor;
-
-    @Column(length = 50)
-    private String fonte;
 
     @Column(nullable = false)
     private boolean principal;

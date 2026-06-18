@@ -131,30 +131,38 @@ public class ApiGeridaCnpjFonte implements FonteCnpj {
             }
         }
 
-        return new EmpresaPayload(nome, e.cnpj(), primeiroTelefone(e), primeiroEmail(e),
-                endereco, cidade, null, lat, lng, "casadosdados", cadastrais);
+        List<String> telefones = telefonesDe(e);
+        List<String> emails = emailsDe(e);
+        String telefone = telefones.isEmpty() ? null : telefones.get(0);
+        String email = emails.isEmpty() ? null : emails.get(0);
+
+        return new EmpresaPayload(nome, e.cnpj(), telefone, email,
+                endereco, cidade, null, lat, lng, cadastrais, telefones, emails);
     }
 
-    private static String primeiroTelefone(EmpresaCnpj e) {
+    /** Todos os telefones (sem duplicados, na ordem da Receita). */
+    private static List<String> telefonesDe(EmpresaCnpj e) {
         if (e.contatoTelefonico() == null) {
-            return null;
+            return List.of();
         }
         return e.contatoTelefonico().stream()
                 .map(ContatoTel::completo)
                 .filter(ApiGeridaCnpjFonte::temTexto)
-                .findFirst().orElse(null);
+                .distinct()
+                .toList();
     }
 
-    /** Primeiro email, preferindo os marcados como válidos. */
-    private static String primeiroEmail(EmpresaCnpj e) {
+    /** Todos os emails (válidos primeiro, sem duplicados). */
+    private static List<String> emailsDe(EmpresaCnpj e) {
         if (e.contatoEmail() == null) {
-            return null;
+            return List.of();
         }
         return e.contatoEmail().stream()
                 .filter(c -> temTexto(c.email()))
                 .sorted((a, b) -> Boolean.compare(Boolean.TRUE.equals(b.valido()), Boolean.TRUE.equals(a.valido())))
                 .map(ContatoEmail::email)
-                .findFirst().orElse(null);
+                .distinct()
+                .toList();
     }
 
     private static String comporEndereco(Endereco e) {
