@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Liga um job às empresas encontradas, com o score calculado (ARQUITETURA §5).
+ * Liga um job às empresas encontradas (ARQUITETURA §5).
  * Referencia a empresa por id (sem relação JPA) para manter as features desacopladas.
  */
 @Entity
@@ -23,15 +23,11 @@ public class JobResultado {
     @Column(name = "empresa_id")
     private Long empresaId;
 
-    @Column(nullable = false)
-    private int score;
-
     public JobResultado() {
     }
 
-    public JobResultado(Long jobId, Long empresaId, int score) {
+    public JobResultado(Long jobId, Long empresaId) {
         this.jobId = jobId;
         this.empresaId = empresaId;
-        this.score = score;
     }
 }

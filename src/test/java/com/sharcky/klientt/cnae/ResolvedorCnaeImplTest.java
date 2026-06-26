@@ -86,4 +86,36 @@ class ResolvedorCnaeImplTest {
 
         assertThat(r.resolver("  ")).isEmpty();
     }
+
+    @Test
+    void candidatosDevolveVariosParaTermoAmbiguo() {
+        CnaeCatalogoRepository repo = mock(CnaeCatalogoRepository.class);
+        when(repo.findAll()).thenReturn(List.of(
+                cnae("9521500", "REPARAÇÃO E MANUTENÇÃO DE EQUIPAMENTOS ELETRODOMÉSTICOS"),
+                cnae("9511800", "REPARAÇÃO E MANUTENÇÃO DE COMPUTADORES E PERIFÉRICOS"),
+                cnae("9512600", "REPARAÇÃO E MANUTENÇÃO DE EQUIPAMENTOS DE COMUNICAÇÃO")));
+        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), repo);
+
+        List<Cnae> res = r.candidatos("reparação e manutenção");
+
+        assertThat(res).hasSize(3).extracting(Cnae::codigo)
+                .containsExactlyInAnyOrder("9521500", "9511800", "9512600");
+    }
+
+    @Test
+    void candidatosUsaSinonimoNoTopo() {
+        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), catalogo());
+
+        List<Cnae> res = r.candidatos("barbearia");
+
+        assertThat(res).isNotEmpty();
+        assertThat(res.get(0).codigo()).isEqualTo("9602501");   // sinónimo no topo
+    }
+
+    @Test
+    void candidatosTermoVazioDevolveVazio() {
+        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), mock(CnaeCatalogoRepository.class));
+
+        assertThat(r.candidatos("  ")).isEmpty();
+    }
 }

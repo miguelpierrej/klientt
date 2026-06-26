@@ -1,33 +1,30 @@
 package com.sharcky.klientt.busca.service;
 
 import com.sharcky.klientt.busca.job.JobService;
-import com.sharcky.klientt.busca.mapper.ScrapeMapper;
-import com.sharcky.klientt.busca.scoring.AvaliadorLead;
+import com.sharcky.klientt.cnpj.dto.EmpresaPayload;
+import com.sharcky.klientt.empresa.mapper.EmpresaPayloadMapper;
 import com.sharcky.klientt.empresa.model.Empresa;
 import com.sharcky.klientt.empresa.service.EmpresaCacheService;
-import com.sharcky.klientt.scraper.dto.EmpresaPayload;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /**
- * Implementação da ingestão partilhada (ver {@link IngestaoService}).
- * Extraída do tratamento do callback do scraper para ser reutilizada por qualquer fonte.
+ * Implementação da ingestão partilhada (ver {@link IngestaoService}): faz upsert na cache e liga
+ * cada empresa ao job.
  */
 @Service
 public class IngestaoServiceImpl implements IngestaoService {
 
     private final EmpresaCacheService cacheService;
-    private final ScrapeMapper scrapeMapper;
-    private final AvaliadorLead avaliador;
+    private final EmpresaPayloadMapper payloadMapper;
     private final JobService jobService;
 
-    public IngestaoServiceImpl(EmpresaCacheService cacheService, ScrapeMapper scrapeMapper,
-                               AvaliadorLead avaliador, JobService jobService) {
+    public IngestaoServiceImpl(EmpresaCacheService cacheService, EmpresaPayloadMapper payloadMapper,
+                               JobService jobService) {
         this.cacheService = cacheService;
-        this.scrapeMapper = scrapeMapper;
-        this.avaliador = avaliador;
+        this.payloadMapper = payloadMapper;
         this.jobService = jobService;
     }
 
@@ -38,10 +35,9 @@ public class IngestaoServiceImpl implements IngestaoService {
             return;
         }
         for (EmpresaPayload payload : empresas) {
-            Empresa persistida = cacheService.upsert(scrapeMapper.toEmpresa(payload));
+            Empresa persistida = cacheService.upsert(payloadMapper.toEmpresa(payload));
             if (jobId != null) {
-                int score = avaliador.avaliar(persistida).score();
-                jobService.registarResultado(jobId, persistida.getId(), score);
+                jobService.registarResultado(jobId, persistida.getId());
             }
         }
     }

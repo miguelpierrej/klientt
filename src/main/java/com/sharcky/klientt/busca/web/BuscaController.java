@@ -4,7 +4,9 @@ import com.sharcky.klientt.busca.dto.BuscaRequest;
 import com.sharcky.klientt.busca.dto.FiltroBusca;
 import com.sharcky.klientt.busca.dto.OrdenarPor;
 import com.sharcky.klientt.busca.dto.ResultadoBusca;
+import com.sharcky.klientt.busca.dto.TipoBusca;
 import com.sharcky.klientt.busca.service.BuscaService;
+import com.sharcky.klientt.cnae.ResolvedorCnae;
 import com.sharcky.klientt.conta.seguranca.KlienttUserDetails;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,9 +26,11 @@ import java.util.List;
 public class BuscaController {
 
     private final BuscaService buscaService;
+    private final ResolvedorCnae resolvedorCnae;
 
-    public BuscaController(BuscaService buscaService) {
+    public BuscaController(BuscaService buscaService, ResolvedorCnae resolvedorCnae) {
         this.buscaService = buscaService;
+        this.resolvedorCnae = resolvedorCnae;
     }
 
     /** Página principal com o formulário de busca. */
@@ -36,12 +40,14 @@ public class BuscaController {
     }
 
     /**
-     * Inicia a busca (cria job + dispara scraper) e devolve o fragmento de espera,
-     * que faz polling até os resultados chegarem.
+     * Trata a submissão da busca. Para NICHO sem CNAE confirmado, devolve primeiro o passo de
+     * confirmação do CNAE (não gasta saldo). Com o CNAE confirmado (ou para NOME), inicia o job e
+     * devolve o fragmento de espera, que faz polling até os resultados chegarem.
      */
     @PostMapping("/buscar")
     public String iniciar(@Valid @ModelAttribute BuscaRequest buscaRequest,
                           BindingResult binding,
+                          @RequestParam(required = false) String cnaeOutro,
                           @AuthenticationPrincipal KlienttUserDetails utilizador,
                           Model model) {
         if (binding.hasErrors()) {
@@ -51,9 +57,27 @@ public class BuscaController {
             return "fragments/resultados :: erro";
         }
 
-        Long jobId = buscaService.iniciar(buscaRequest, utilizador.getId());
+        // CNAE escolhido: o digitado manualmente prevalece sobre o selecionado.
+        String cnae = temTexto(cnaeOutro) ? cnaeOutro.trim()
+                : (buscaRequest.temCnae() ? buscaRequest.cnae() : null);
+
+        // NICHO sem CNAE confirmado → pedir confirmação primeiro (não inicia a busca).
+        if (buscaRequest.tipo() == TipoBusca.NICHO && cnae == null) {
+            model.addAttribute("candidatos", resolvedorCnae.candidatos(buscaRequest.termo()));
+            model.addAttribute("termo", buscaRequest.termo());
+            model.addAttribute("regiao", buscaRequest.regiao());
+            return "fragments/resultados :: confirmar-cnae";
+        }
+
+        BuscaRequest efetiva = new BuscaRequest(
+                buscaRequest.tipo(), buscaRequest.termo(), buscaRequest.regiao(), cnae);
+        Long jobId = buscaService.iniciar(efetiva, utilizador.getId());
         model.addAttribute("jobId", jobId);
         return "fragments/resultados :: aguardar";
+    }
+
+    private static boolean temTexto(String s) {
+        return s != null && !s.isBlank();
     }
 
     /**
@@ -92,14 +116,10 @@ public class BuscaController {
     @GetMapping("/buscar/{jobId}/resultados")
     public String filtrar(@PathVariable Long jobId,
                           @RequestParam(required = false) OrdenarPor ordenar,
-                          @RequestParam(defaultValue = "false") boolean semSite,
-                          @RequestParam(defaultValue = "false") boolean notaBaixa,
-                          @RequestParam(defaultValue = "false") boolean poucosSeguidores,
-                          @RequestParam(defaultValue = "false") boolean procon,
                           @RequestParam(defaultValue = "false") boolean comContato,
                           @AuthenticationPrincipal KlienttUserDetails utilizador,
                           Model model) {
-        FiltroBusca filtro = new FiltroBusca(ordenar, semSite, notaBaixa, poucosSeguidores, procon, comContato);
+        FiltroBusca filtro = new FiltroBusca(ordenar, comContato);
         model.addAttribute("leads", buscaService.filtrar(jobId, utilizador.getId(), filtro));
         return "fragments/resultados :: leads";
     }

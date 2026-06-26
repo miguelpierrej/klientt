@@ -11,5 +11,12 @@ import java.util.List;
  */
 public interface ResolvedorCnae {
 
+    /** Melhor CNAE para o termo (máx. 1) — usado como fallback automático na descoberta. */
     List<Cnae> resolver(String termo);
+
+    /**
+     * Lista ordenada de CNAEs candidatos para o termo (para o utilizador confirmar antes de buscar).
+     * Combina sinónimos, sugestão do LLM e correspondências do catálogo; vazia se nada bater.
+     */
+    List<Cnae> candidatos(String termo);
 }

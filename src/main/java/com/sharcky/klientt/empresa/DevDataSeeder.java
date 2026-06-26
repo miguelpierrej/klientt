@@ -1,20 +1,19 @@
 package com.sharcky.klientt.empresa;
 
+import com.sharcky.klientt.empresa.model.Contato;
 import com.sharcky.klientt.empresa.model.Empresa;
-import com.sharcky.klientt.empresa.model.EmpresaRede;
-import com.sharcky.klientt.empresa.model.Sinais;
 import com.sharcky.klientt.empresa.repository.EmpresaRepository;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
  * Popula a BD com dados de exemplo no arranque, SE estiver vazia.
- * Temporário (dev): será substituído pelos dados reais do scraper Python.
+ * Temporário (dev): será substituído pelos dados reais da Casa dos Dados.
  * Em H2 em memória corre sempre (BD nova a cada arranque); em MySQL só na 1ª vez.
  */
 @Component
@@ -34,38 +33,43 @@ public class DevDataSeeder implements ApplicationRunner {
         }
 
         empresaRepository.saveAll(List.of(
-                criar("Barbearia do Zé", "São Paulo", new BigDecimal("3.4"), false, null, false,
-                        "instagram", 180),
-                criar("Salão Beleza Pura", "São Paulo", new BigDecimal("4.6"), true, 900, false,
-                        "instagram", 5200),
-                criar("Studio Hair Premium", "São Paulo", new BigDecimal("4.1"), true, 4200, false,
-                        "instagram", 820),
-                criar("Corte & Cia", "São Paulo", new BigDecimal("2.8"), false, null, true,
-                        "facebook", 0),
-                criar("Espaço Navalha", "São Paulo", new BigDecimal("4.8"), true, 800, false,
-                        "instagram", 12000)
+                criar("Barbearia do Zé", "São Paulo", "12345678000199", "MICRO EMPRESA",
+                        LocalDate.of(2021, 3, 10), "+5511990000001", "contato@barbeariadoze.com.br"),
+                criar("Salão Beleza Pura", "São Paulo", "22345678000188", "MICRO EMPRESA",
+                        LocalDate.of(2018, 7, 1), "+5511990000002", null),
+                criar("Studio Hair Premium", "São Paulo", "32345678000177", "EMPRESA DE PEQUENO PORTE",
+                        LocalDate.of(2023, 1, 20), null, "studio@hairpremium.com.br"),
+                criar("Corte & Cia", "São Paulo", "42345678000166", "MICRO EMPRESA",
+                        LocalDate.of(2015, 11, 5), null, null),
+                criar("Espaço Navalha", "São Paulo", "52345678000155", "MICRO EMPRESA",
+                        LocalDate.of(2024, 2, 14), "+5511990000005", "ola@espaconavalha.com.br")
         ));
     }
 
-    private Empresa criar(String nome, String cidade, BigDecimal nota, boolean temSite,
-                          Integer velocidadeMs, boolean procon, String rede, int seguidores) {
+    private Empresa criar(String nome, String cidade, String cnpj, String porte,
+                          LocalDate dataAbertura, String telefone, String email) {
         Empresa e = new Empresa();
         e.setNome(nome);
         e.setCidade(cidade);
-        e.setFonte("seed");
-
-        Sinais s = new Sinais();
-        s.setNotaGoogle(nota);
-        s.setSiteExiste(temSite);
-        s.setSiteVelocidadeMs(velocidadeMs);
-        s.setProconEviteSite(procon);
-        e.definirSinais(s);
-
-        EmpresaRede r = new EmpresaRede();
-        r.setRede(rede);
-        r.setSeguidores(seguidores);
-        e.adicionarRede(r);
-
+        e.setCnpj(cnpj);
+        e.setPorte(porte);
+        e.setSituacaoCadastral("ATIVA");
+        e.setDataAbertura(dataAbertura);
+        e.setTelefone(telefone);
+        e.setEmail(email);
+        if (telefone != null) {
+            e.adicionarContato(contato("telefone", telefone));
+        }
+        if (email != null) {
+            e.adicionarContato(contato("email", email));
+        }
         return e;
+    }
+
+    private Contato contato(String tipo, String valor) {
+        Contato c = new Contato();
+        c.setTipo(tipo);
+        c.setValor(valor);
+        return c;
     }
 }

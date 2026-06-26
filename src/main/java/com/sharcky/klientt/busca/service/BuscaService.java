@@ -13,7 +13,7 @@ import java.util.List;
  */
 public interface BuscaService {
 
-    /** Valida a quota, cria um job do utilizador, dispara o scraper e devolve o id (para polling). */
+    /** Valida a quota, cria um job do utilizador, dispara a descoberta e devolve o id (para polling). */
     Long iniciar(BuscaRequest request, Long utilizadorId);
 
     /** Estado atual do job (do utilizador) + leads (quando concluído). Usado pelo polling. */

@@ -5,11 +5,13 @@ import com.sharcky.klientt.busca.job.JobService;
 import com.sharcky.klientt.cnae.Cnae;
 import com.sharcky.klientt.cnae.ResolvedorCnae;
 import com.sharcky.klientt.cnpj.FonteCnpj;
+import com.sharcky.klientt.cnpj.FonteContatoCnpj;
 import com.sharcky.klientt.cnpj.config.ClienteCnpjProperties;
-import com.sharcky.klientt.enriquecimento.client.EnriquecimentoClient;
-import com.sharcky.klientt.enriquecimento.dto.EnriquecimentoRequest;
-import com.sharcky.klientt.scraper.config.ScraperProperties;
-import com.sharcky.klientt.scraper.dto.EmpresaPayload;
+import com.sharcky.klientt.cnpj.config.ContatoFallbackProperties;
+import com.sharcky.klientt.cnpj.dto.EmpresaPayload;
+import com.sharcky.klientt.empresa.model.Contato;
+import com.sharcky.klientt.empresa.model.Empresa;
+import com.sharcky.klientt.empresa.service.EmpresaCacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -19,11 +21,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Descoberta primária (Casa dos Dados) + arranque do enriquecimento Maps (PLANO-DUAL-FONTE.md, Fase 2).
+ * Descoberta (Casa dos Dados) em background (PLANO-SO-API.md, Fases A/D).
  *
- * <p>Corre em background: busca na Casa dos Dados (NOME ou NICHO), ingere os leads e, para cada
- * empresa com CNPJ, dispara o enriquecimento Maps (assíncrono, por empresa). No fim regista quantos
- * enriquecimentos esperar; o job conclui quando todos chegarem (ou já, se nenhum).
+ * <p>Corre em {@code @Async}: busca na Casa dos Dados (NOME ou NICHO), ingere os leads e, para os que
+ * vieram sem contacto, tenta o fallback por CNPJ (BrasilAPI). No fim conclui o job. Falha graciosa:
+ * qualquer erro é registado e o job conclui na mesma.
  */
 @Service
 public class FonteCnpjExecutor {
@@ -35,66 +37,103 @@ public class FonteCnpjExecutor {
     private final IngestaoService ingestaoService;
     private final JobService jobService;
     private final ClienteCnpjProperties properties;
-    private final EnriquecimentoClient enriquecimentoClient;
-    private final ScraperProperties scraperProperties;
+    private final FonteContatoCnpj fonteContato;
+    private final ContatoFallbackProperties contatoFallback;
+    private final EmpresaCacheService cacheService;
 
     public FonteCnpjExecutor(ResolvedorCnae resolvedorCnae, FonteCnpj fonteCnpj,
                              IngestaoService ingestaoService, JobService jobService,
-                             ClienteCnpjProperties properties, EnriquecimentoClient enriquecimentoClient,
-                             ScraperProperties scraperProperties) {
+                             ClienteCnpjProperties properties, FonteContatoCnpj fonteContato,
+                             ContatoFallbackProperties contatoFallback, EmpresaCacheService cacheService) {
         this.resolvedorCnae = resolvedorCnae;
         this.fonteCnpj = fonteCnpj;
         this.ingestaoService = ingestaoService;
         this.jobService = jobService;
         this.properties = properties;
-        this.enriquecimentoClient = enriquecimentoClient;
-        this.scraperProperties = scraperProperties;
+        this.fonteContato = fonteContato;
+        this.contatoFallback = contatoFallback;
+        this.cacheService = cacheService;
     }
 
     @Async
-    public void executar(Long jobId, TipoBusca tipo, String termo, String regiao) {
-        int enriquecimentos = 0;
+    public void executar(Long jobId, TipoBusca tipo, String termo, String regiao, String cnae) {
         try {
-            List<EmpresaPayload> empresas = descobrir(tipo, termo, regiao, properties.getLimiteDefault());
+            List<EmpresaPayload> empresas = descobrir(tipo, termo, regiao, cnae, properties.getLimiteDefault());
             ingestaoService.ingerir(empresas, jobId);
-            enriquecimentos = dispararEnriquecimentos(jobId, empresas, regiao);
+            complementarContatos(empresas);
         } catch (Exception ex) {
             log.warn("Falha na descoberta CNPJ jobId={} (tipo={}, termo='{}'): {}", jobId, tipo, termo, ex.getMessage());
         } finally {
-            // Conclui já se não houver enriquecimentos; senão espera os callbacks por empresa.
-            jobService.marcarDescobertaConcluida(jobId, enriquecimentos);
+            jobService.concluir(jobId);
         }
     }
 
-    private List<EmpresaPayload> descobrir(TipoBusca tipo, String termo, String regiao, int limite) {
+    private List<EmpresaPayload> descobrir(TipoBusca tipo, String termo, String regiao, String cnae, int limite) {
         if (tipo == TipoBusca.NOME) {
             return fonteCnpj.buscarPorNome(termo, regiao, limite);
         }
+        // NICHO: usa o CNAE confirmado pelo utilizador; sem ele, resolve o termo (fallback).
+        if (cnae != null && !cnae.isBlank()) {
+            return fonteCnpj.buscarPorCnae(cnae, regiao, limite);
+        }
         List<EmpresaPayload> todas = new ArrayList<>();
-        for (Cnae cnae : resolvedorCnae.resolver(termo)) {
-            todas.addAll(fonteCnpj.buscarPorCnae(cnae.codigo(), regiao, limite));
+        for (Cnae c : resolvedorCnae.resolver(termo)) {
+            todas.addAll(fonteCnpj.buscarPorCnae(c.codigo(), regiao, limite));
         }
         return todas;
     }
 
-    /** Dispara o enriquecimento Maps por empresa (com CNPJ). Devolve quantos foram disparados. */
-    private int dispararEnriquecimentos(Long jobId, List<EmpresaPayload> empresas, String regiao) {
-        int n = 0;
-        String callbackUrl = scraperProperties.enriquecimentoCallbackUrl();
+    /**
+     * Para cada empresa com CNPJ mas sem contacto, consulta a API pública por CNPJ e funde os
+     * contactos encontrados (cada upsert na sua transação). Desligado por default.
+     */
+    private void complementarContatos(List<EmpresaPayload> empresas) {
+        if (!contatoFallback.isEnabled()) {
+            return;
+        }
+        int preenchidos = 0;
         for (EmpresaPayload e : empresas) {
-            if (e.cnpj() == null || e.cnpj().isBlank()) {
+            if (temContato(e) || e.cnpj() == null || e.cnpj().isBlank()) {
                 continue;
             }
-            String municipio = e.cidade() != null ? e.cidade() : regiao;
-            try {
-                enriquecimentoClient.enriquecer(new EnriquecimentoRequest(
-                        String.valueOf(jobId), e.cnpj(), e.nome(), municipio, e.endereco(), callbackUrl));
-                n++;
-            } catch (Exception ex) {
-                // Dispatch falhou (scraper em baixo) — não conta como esperado, para o job não ficar preso.
-                log.warn("Falha ao disparar enriquecimento cnpj={}: {}", e.cnpj(), ex.getMessage());
+            FonteContatoCnpj.Contatos extra = fonteContato.consultar(e.cnpj());
+            if (extra.isVazio()) {
+                continue;
             }
+            cacheService.upsert(patchDeContatos(e, extra));
+            preenchidos++;
         }
-        return n;
+        if (preenchidos > 0) {
+            log.info("Fallback de contacto preencheu {} de {} empresas sem contacto", preenchidos, empresas.size());
+        }
+    }
+
+    private static boolean temContato(EmpresaPayload e) {
+        return (e.telefones() != null && !e.telefones().isEmpty())
+                || (e.emails() != null && !e.emails().isEmpty());
+    }
+
+    /** Empresa mínima (identificada por CNPJ) só com os contactos do fallback, para o merge da cache. */
+    private static Empresa patchDeContatos(EmpresaPayload e, FonteContatoCnpj.Contatos extra) {
+        Empresa patch = new Empresa();
+        patch.setNome(e.nome());
+        patch.setCidade(e.cidade());
+        patch.setCnpj(e.cnpj());
+        extra.telefones().forEach(t -> patch.adicionarContato(contato("telefone", t)));
+        extra.emails().forEach(m -> patch.adicionarContato(contato("email", m)));
+        if (!extra.telefones().isEmpty()) {
+            patch.setTelefone(extra.telefones().get(0));
+        }
+        if (!extra.emails().isEmpty()) {
+            patch.setEmail(extra.emails().get(0));
+        }
+        return patch;
+    }
+
+    private static Contato contato(String tipo, String valor) {
+        Contato c = new Contato();
+        c.setTipo(tipo);
+        c.setValor(valor);
+        return c;
     }
 }

@@ -6,7 +6,6 @@ package com.sharcky.klientt.busca.dto;
 public record ContatoView(
         String tipo,
         String valor,
-        String fonte,
         boolean principal,
         boolean verificado
 ) {

@@ -2,8 +2,6 @@ package com.sharcky.klientt.empresa.service;
 
 import com.sharcky.klientt.empresa.model.Contato;
 import com.sharcky.klientt.empresa.model.Empresa;
-import com.sharcky.klientt.empresa.model.EmpresaRede;
-import com.sharcky.klientt.empresa.model.Sinais;
 import com.sharcky.klientt.empresa.repository.EmpresaRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,12 +9,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,16 +40,16 @@ class EmpresaCacheServiceImplTest {
     void identidadePorCnpjFundeNaExistente() {
         Empresa existente = empresa("ZE SANTOS BARBEARIA LTDA", "São Paulo");
         existente.setCnpj("12345678000199");
-        existente.setEmail("contato@ze.com.br");      // veio da Receita
+        existente.setEmail("contato@ze.com.br");      // já tinha email
         when(repository.findFirstByCnpj("12345678000199")).thenReturn(Optional.of(existente));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        // Maps traz o mesmo CNPJ, sem email mas com website
-        Empresa doMaps = empresa("Barbearia do Zé", "São Paulo");
-        doMaps.setCnpj("12345678000199");
-        doMaps.setWebsite("https://barbeariaze.com.br");
+        // Recoleta com o mesmo CNPJ, sem email mas com website
+        Empresa fresca = empresa("Barbearia do Zé", "São Paulo");
+        fresca.setCnpj("12345678000199");
+        fresca.setWebsite("https://barbeariaze.com.br");
 
-        Empresa fundida = cache.upsert(doMaps);
+        Empresa fundida = cache.upsert(fresca);
 
         assertThat(fundida).isSameAs(existente);
         assertThat(fundida.getEmail()).isEqualTo("contato@ze.com.br");          // não apagado
@@ -79,7 +75,7 @@ class EmpresaCacheServiceImplTest {
 
     @Test
     void cnpjNovoCaiNoFallbackNomeCidadeEFundeCadastrais() {
-        // Lead cacheado antes pelo Maps, ainda sem CNPJ
+        // Lead cacheado antes, ainda sem CNPJ
         Empresa existente = empresa("Barbearia do Zé", "São Paulo");
         existente.setWebsite("https://barbeariaze.com.br");
         when(repository.findFirstByCnpj("12345678000199")).thenReturn(Optional.empty());
@@ -100,48 +96,6 @@ class EmpresaCacheServiceImplTest {
     }
 
     @Test
-    void sinaisFundemSemApagarEProconEhOr() {
-        Empresa existente = empresa("Bar X", "Lisboa");
-        Sinais sExist = new Sinais();
-        sExist.setNotaGoogle(new BigDecimal("4.2"));
-        sExist.setProconEviteSite(false);
-        existente.definirSinais(sExist);
-        when(repository.findFirstByNomeIgnoreCaseAndCidadeIgnoreCase("Bar X", "Lisboa"))
-                .thenReturn(Optional.of(existente));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        Empresa fresca = empresa("Bar X", "Lisboa");
-        Sinais sNovo = new Sinais();              // sem nota, mas com siteExiste e procon
-        sNovo.setSiteExiste(false);
-        sNovo.setProconEviteSite(true);
-        fresca.definirSinais(sNovo);
-
-        Empresa fundida = cache.upsert(fresca);
-
-        assertThat(fundida.getSinais().getNotaGoogle()).isEqualByComparingTo("4.2");  // não apagada
-        assertThat(fundida.getSinais().getSiteExiste()).isFalse();                    // preenchido
-        assertThat(fundida.getSinais().isProconEviteSite()).isTrue();                 // OR
-    }
-
-    @Test
-    void redesFazemUniaoPorRedeEUrl() {
-        Empresa existente = empresa("Bar X", "Lisboa");
-        existente.adicionarRede(rede("instagram", "https://instagram.com/barx", 100));
-        when(repository.findFirstByNomeIgnoreCaseAndCidadeIgnoreCase("Bar X", "Lisboa"))
-                .thenReturn(Optional.of(existente));
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        Empresa fresca = empresa("Bar X", "Lisboa");
-        fresca.adicionarRede(rede("facebook", "https://facebook.com/barx", 300));
-
-        Empresa fundida = cache.upsert(fresca);
-
-        assertThat(fundida.getRedes()).hasSize(2);
-        assertThat(fundida.getRedes()).extracting(EmpresaRede::getRede)
-                .containsExactlyInAnyOrder("instagram", "facebook");
-    }
-
-    @Test
     void empresaNovaGeraContatosDeTelefoneEEmail() {
         when(repository.findFirstByNomeIgnoreCaseAndCidadeIgnoreCase(any(), any())).thenReturn(Optional.empty());
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -149,37 +103,53 @@ class EmpresaCacheServiceImplTest {
         Empresa fresca = empresa("Bar X", "Lisboa");
         fresca.setTelefone("+351910000000");
         fresca.setEmail("contato@barx.test");
-        fresca.setFonte("google_maps");
 
         Empresa salva = cache.upsert(fresca);
 
         assertThat(salva.getContatos()).extracting(Contato::getTipo)
                 .containsExactlyInAnyOrder("telefone", "email");
-        assertThat(salva.getContatos()).allSatisfy(c -> assertThat(c.getFonte()).isEqualTo("google_maps"));
         assertThat(salva.isContactavel()).isTrue();
     }
 
     @Test
-    void contatosFazemUniaoSemDuplicarEntreFontes() {
-        Empresa existente = empresa("Bar X", "Lisboa");      // já tinha telefone (Maps)
-        existente.setFonte("google_maps");
-        Contato tel = new Contato();
-        tel.setTipo("telefone");
-        tel.setValor("+351910000000");
-        existente.adicionarContato(tel);
+    void contatosJaMapeadosSaoPreservados() {
+        when(repository.findFirstByNomeIgnoreCaseAndCidadeIgnoreCase(any(), any())).thenReturn(Optional.empty());
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // Empresa já com vários contactos (como vêm da descoberta/mapper).
+        Empresa fresca = empresa("Bar X", "Lisboa");
+        fresca.adicionarContato(contato("telefone", "+351910000000"));
+        fresca.adicionarContato(contato("telefone", "+351920000000"));
+        fresca.adicionarContato(contato("email", "a@barx.test"));
+
+        Empresa salva = cache.upsert(fresca);
+
+        assertThat(salva.getContatos()).hasSize(3);   // não re-deriva nem perde nenhum
+    }
+
+    @Test
+    void contatosFazemUniaoSemDuplicar() {
+        Empresa existente = empresa("Bar X", "Lisboa");      // já tinha telefone
+        existente.adicionarContato(contato("telefone", "+351910000000"));
         when(repository.findFirstByNomeIgnoreCaseAndCidadeIgnoreCase("Bar X", "Lisboa"))
                 .thenReturn(Optional.of(existente));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Empresa daReceita = empresa("Bar X", "Lisboa");      // mesmo telefone + email novo
-        daReceita.setTelefone("+351910000000");
-        daReceita.setEmail("contato@barx.test");
-        daReceita.setFonte("receita");
+        Empresa fresca = empresa("Bar X", "Lisboa");      // mesmo telefone + email novo
+        fresca.setTelefone("+351910000000");
+        fresca.setEmail("contato@barx.test");
 
-        Empresa fundida = cache.upsert(daReceita);
+        Empresa fundida = cache.upsert(fresca);
 
         assertThat(fundida.getContatos()).extracting(Contato::getTipo)
                 .containsExactlyInAnyOrder("telefone", "email");   // telefone não duplicou
+    }
+
+    private Contato contato(String tipo, String valor) {
+        Contato c = new Contato();
+        c.setTipo(tipo);
+        c.setValor(valor);
+        return c;
     }
 
     private Empresa empresa(String nome, String cidade) {
@@ -187,13 +157,5 @@ class EmpresaCacheServiceImplTest {
         e.setNome(nome);
         e.setCidade(cidade);
         return e;
-    }
-
-    private EmpresaRede rede(String nome, String url, int seguidores) {
-        EmpresaRede r = new EmpresaRede();
-        r.setRede(nome);
-        r.setUrl(url);
-        r.setSeguidores(seguidores);
-        return r;
     }
 }

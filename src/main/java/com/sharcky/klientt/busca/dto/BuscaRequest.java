@@ -18,9 +18,22 @@ public record BuscaRequest(
         String termo,
 
         @Size(max = 120, message = "A região é demasiado longa.")
-        String regiao
+        String regiao,
+
+        /** CNAE confirmado pelo utilizador (só para busca por NICHO). Vazio na 1ª submissão. */
+        @Size(max = 20, message = "O CNAE é inválido.")
+        String cnae
 ) {
+    /** Conveniência: busca sem CNAE confirmado (NOME, ou NICHO antes da confirmação). */
+    public BuscaRequest(TipoBusca tipo, String termo, String regiao) {
+        this(tipo, termo, regiao, null);
+    }
+
     public boolean temRegiao() {
         return regiao != null && !regiao.isBlank();
+    }
+
+    public boolean temCnae() {
+        return cnae != null && !cnae.isBlank();
     }
 }

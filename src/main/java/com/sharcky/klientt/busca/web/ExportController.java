@@ -35,13 +35,9 @@ public class ExportController {
     @GetMapping("/buscar/{jobId}/exportar")
     public ResponseEntity<byte[]> exportar(@PathVariable Long jobId,
                                            @RequestParam(required = false) OrdenarPor ordenar,
-                                           @RequestParam(defaultValue = "false") boolean semSite,
-                                           @RequestParam(defaultValue = "false") boolean notaBaixa,
-                                           @RequestParam(defaultValue = "false") boolean poucosSeguidores,
-                                           @RequestParam(defaultValue = "false") boolean procon,
                                            @RequestParam(defaultValue = "false") boolean comContato,
                                            @AuthenticationPrincipal KlienttUserDetails utilizador) {
-        FiltroBusca filtro = new FiltroBusca(ordenar, semSite, notaBaixa, poucosSeguidores, procon, comContato);
+        FiltroBusca filtro = new FiltroBusca(ordenar, comContato);
         List<LeadDetalhe> leads = buscaService.exportar(jobId, utilizador.getId(), filtro);
         byte[] csv = csvWriter.escrever(leads);
 

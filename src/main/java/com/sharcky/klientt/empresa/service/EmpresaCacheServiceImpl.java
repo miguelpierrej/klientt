@@ -2,28 +2,23 @@ package com.sharcky.klientt.empresa.service;
 
 import com.sharcky.klientt.empresa.model.Contato;
 import com.sharcky.klientt.empresa.model.Empresa;
-import com.sharcky.klientt.empresa.model.EmpresaRede;
-import com.sharcky.klientt.empresa.model.Sinais;
 import com.sharcky.klientt.empresa.repository.EmpresaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 /**
- * Cache de empresas com identidade por CNPJ e merge campo-a-campo (PLANO-DUAL-FONTE.md, Fase B).
+ * Cache de empresas com identidade por CNPJ e merge campo-a-campo.
  *
- * <p>Identidade: CNPJ (só dígitos) quando existe; fallback nome+cidade. Como as duas fontes
- * (Maps + CNPJ-por-CNAE) alimentam o mesmo lead, o merge é <b>não-destrutivo</b>: um valor nulo
- * de uma fonte nunca apaga o que a outra já trouxe (a Receita dá email/cadastrais, o Maps dá
- * nota/site/redes). Quando ambos têm valor, o fresco (recoleta) prevalece.
+ * <p>Identidade: CNPJ (só dígitos) quando existe; fallback nome+cidade. O merge é
+ * <b>não-destrutivo</b>: um valor nulo nunca apaga o que já existia; quando ambos têm valor, o
+ * fresco (recoleta) prevalece. Os contactos (telefone/email) são unidos por (tipo, valor).
  */
 @Service
 public class EmpresaCacheServiceImpl implements EmpresaCacheService {
@@ -57,7 +52,11 @@ public class EmpresaCacheServiceImpl implements EmpresaCacheService {
 
         fresca.setCnpj(cnpj);
         fresca.setAtualizadoEm(LocalDateTime.now());
-        contatosDe(fresca).forEach(fresca::adicionarContato);
+        // Quando a fresca já traz contactos (mapeados da descoberta), mantém-nos; senão deriva do
+        // telefone/email diretos (seed/legado).
+        if (fresca.getContatos().isEmpty()) {
+            derivarDeScalar(fresca).forEach(fresca::adicionarContato);
+        }
         return empresaRepository.save(fresca);
     }
 
@@ -70,7 +69,6 @@ public class EmpresaCacheServiceImpl implements EmpresaCacheService {
         alvo.setWebsite(coalesce(fresca.getWebsite(), alvo.getWebsite()));
         alvo.setLat(coalesce(fresca.getLat(), alvo.getLat()));
         alvo.setLng(coalesce(fresca.getLng(), alvo.getLng()));
-        alvo.setFonte(coalesce(fresca.getFonte(), alvo.getFonte()));
 
         // Dados cadastrais (CNPJ / Receita)
         alvo.setRazaoSocial(coalesce(fresca.getRazaoSocial(), alvo.getRazaoSocial()));
@@ -86,89 +84,51 @@ public class EmpresaCacheServiceImpl implements EmpresaCacheService {
 
         alvo.setAtualizadoEm(LocalDateTime.now());
 
-        fundirSinais(alvo, fresca.getSinais());
-        fundirRedes(alvo, fresca);
         fundirContatos(alvo, fresca);
     }
 
-    /** União dos contatos por (tipo, valor), trazendo a fonte de cada origem. */
+    /** União dos contatos da fresca nos do alvo, por (tipo, valor) — sem duplicar. */
     private void fundirContatos(Empresa alvo, Empresa fresca) {
         Set<String> existentes = new HashSet<>();
         for (Contato c : alvo.getContatos()) {
             existentes.add(chaveContato(c.getTipo(), c.getValor()));
         }
-        for (Contato novo : contatosDe(fresca)) {
+        for (Contato novo : contatosDaFresca(fresca)) {
             if (existentes.add(chaveContato(novo.getTipo(), novo.getValor()))) {
                 alvo.adicionarContato(novo);
             }
         }
     }
 
-    /** Deriva contatos diretos (telefone/email) dos campos da empresa fresca. */
-    private static List<Contato> contatosDe(Empresa e) {
+    /** Contactos a fundir: os já mapeados na fresca; senão deriva do telefone/email diretos. */
+    private static List<Contato> contatosDaFresca(Empresa fresca) {
+        if (!fresca.getContatos().isEmpty()) {
+            return new ArrayList<>(fresca.getContatos());
+        }
+        return derivarDeScalar(fresca);
+    }
+
+    /** Deriva contatos diretos (telefone/email) dos campos diretos da empresa (seed/legado). */
+    private static List<Contato> derivarDeScalar(Empresa e) {
         List<Contato> lista = new ArrayList<>();
-        adicionar(lista, "telefone", e.getTelefone(), e.getFonte());
-        adicionar(lista, "email", e.getEmail(), e.getFonte());
+        adicionar(lista, "telefone", e.getTelefone());
+        adicionar(lista, "email", e.getEmail());
         return lista;
     }
 
-    private static void adicionar(List<Contato> lista, String tipo, String valor, String fonte) {
+    private static void adicionar(List<Contato> lista, String tipo, String valor) {
         if (valor == null || valor.isBlank()) {
             return;
         }
         Contato c = new Contato();
         c.setTipo(tipo);
         c.setValor(valor.trim());
-        c.setFonte(fonte);
         lista.add(c);
     }
 
     private static String chaveContato(String tipo, String valor) {
         return (tipo == null ? "" : tipo.toLowerCase()) + "|"
                 + (valor == null ? "" : valor.trim().toLowerCase());
-    }
-
-    /** Merge dos sinais: preenche nulos sem apagar; Procon é OR (qualquer fonte que flague mantém). */
-    private void fundirSinais(Empresa alvo, Sinais fresca) {
-        if (fresca == null) {
-            return;
-        }
-        Sinais atual = alvo.getSinais();
-        if (atual == null) {
-            alvo.definirSinais(fresca);
-            return;
-        }
-        atual.setNotaGoogle(coalesce(fresca.getNotaGoogle(), atual.getNotaGoogle()));
-        atual.setNumReviews(coalesce(fresca.getNumReviews(), atual.getNumReviews()));
-        atual.setSiteExiste(coalesce(fresca.getSiteExiste(), atual.getSiteExiste()));
-        atual.setSiteVelocidadeMs(coalesce(fresca.getSiteVelocidadeMs(), atual.getSiteVelocidadeMs()));
-        atual.setSiteHttps(coalesce(fresca.getSiteHttps(), atual.getSiteHttps()));
-        atual.setSiteNumPaginas(coalesce(fresca.getSiteNumPaginas(), atual.getSiteNumPaginas()));
-        atual.setSiteReputacao(coalesce(fresca.getSiteReputacao(), atual.getSiteReputacao()));
-        atual.setProconEviteSite(atual.isProconEviteSite() || fresca.isProconEviteSite());
-        atual.setColetadoEm(LocalDateTime.now());
-    }
-
-    /** União das redes por (rede, url); para uma rede já existente, atualiza seguidores se vierem. */
-    private void fundirRedes(Empresa alvo, Empresa fresca) {
-        Map<String, EmpresaRede> existentes = new HashMap<>();
-        for (EmpresaRede r : alvo.getRedes()) {
-            existentes.put(chaveRede(r), r);
-        }
-        for (EmpresaRede nova : fresca.getRedes()) {
-            EmpresaRede atual = existentes.get(chaveRede(nova));
-            if (atual == null) {
-                alvo.adicionarRede(nova);
-            } else if (nova.getSeguidores() != null) {
-                atual.setSeguidores(nova.getSeguidores());
-            }
-        }
-    }
-
-    private static String chaveRede(EmpresaRede r) {
-        String rede = r.getRede() == null ? "" : r.getRede().toLowerCase();
-        String url = r.getUrl() == null ? "" : r.getUrl().toLowerCase();
-        return rede + "|" + url;
     }
 
     private static <T> T coalesce(T fresco, T existente) {
