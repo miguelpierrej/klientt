@@ -12,8 +12,10 @@ import com.sharcky.klientt.busca.job.JobResultado;
 import com.sharcky.klientt.busca.job.JobResultadoRepository;
 import com.sharcky.klientt.busca.job.JobService;
 import com.sharcky.klientt.busca.mapper.LeadMapper;
-import com.sharcky.klientt.conta.service.QuotaExcedidaException;
-import com.sharcky.klientt.conta.service.QuotaService;
+import com.sharcky.klientt.cnpj.FonteCnpj;
+import com.sharcky.klientt.cnpj.config.ClienteCnpjProperties;
+import com.sharcky.klientt.cnpj.dto.EmpresaPayload;
+import com.sharcky.klientt.conta.service.CreditosService;
 import com.sharcky.klientt.empresa.model.Contato;
 import com.sharcky.klientt.empresa.model.Empresa;
 import com.sharcky.klientt.empresa.repository.EmpresaRepository;
@@ -29,44 +31,53 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class BuscaServiceImplTest {
 
     @Mock JobService jobService;
-    @Mock QuotaService quotaService;
+    @Mock CreditosService creditosService;
     @Mock FonteCnpjExecutor fonteCnpjExecutor;
     @Mock JobResultadoRepository jobResultadoRepository;
     @Mock EmpresaRepository empresaRepository;
     @Mock LeadMapper leadMapper;
     @Mock com.sharcky.klientt.busca.mapper.LeadDetalheMapper detalheMapper;
+    @Mock FonteCnpj fonteCnpj;
+    @Mock IngestaoService ingestaoService;
+    @Mock ClienteCnpjProperties cnpjProperties;
     @InjectMocks BuscaServiceImpl buscaService;
 
     private final BuscaRequest request = new BuscaRequest(TipoBusca.NICHO, "bares", "Lisboa");
 
     @Test
-    void iniciarValidaQuotaCriaJobEDisparaFonteCnpj() {
+    void iniciarCriaJobEDisparaFonteCnpjSemGastarCreditos() {
         when(jobService.criar(request, 1L)).thenReturn(7L);
 
         Long jobId = buscaService.iniciar(request, 1L);
 
         assertThat(jobId).isEqualTo(7L);
-        InOrder inOrder = inOrder(quotaService, jobService, fonteCnpjExecutor);
-        inOrder.verify(quotaService).garantirDisponibilidade(1L);
+        // A 1ª página é grátis: iniciar não consulta créditos.
+        verifyNoInteractions(creditosService);
+        InOrder inOrder = inOrder(jobService, fonteCnpjExecutor);
         inOrder.verify(jobService).criar(request, 1L);
         inOrder.verify(fonteCnpjExecutor).executar(7L, TipoBusca.NICHO, "bares", "Lisboa", null);
     }
 
     @Test
-    void iniciarComQuotaEsgotadaNaoCriaJob() {
-        doThrow(new QuotaExcedidaException(20)).when(quotaService).garantirDisponibilidade(1L);
+    void carregarMaisSemCreditosNaoBusca() {
+        JobBusca job = new JobBusca();
+        job.setUtilizadorId(1L);
+        job.setCnae("5611201");
+        job.setCursor("c1");
+        when(jobService.obter(5L)).thenReturn(Optional.of(job));
+        when(creditosService.disponivel(1L)).thenReturn(0L);   // sem créditos
 
-        assertThatThrownBy(() -> buscaService.iniciar(request, 1L))
-                .isInstanceOf(QuotaExcedidaException.class);
+        buscaService.carregarMais(5L, 1L);
 
-        verify(jobService, never()).criar(any(), any());
-        verify(fonteCnpjExecutor, never()).executar(any(), any(), any(), any(), any());
+        verify(fonteCnpj, never()).buscarPaginaPorCnae(any(), any(), any(), anyInt());
+        verify(ingestaoService, never()).ingerir(any(), any());
     }
 
     @Test
@@ -125,6 +136,52 @@ class BuscaServiceImplTest {
         assertThat(leads).extracting(LeadResponse::nome).containsExactly("Alfa");
     }
 
+    @Test
+    void carregarMaisBuscaProximaPaginaEAtualizaCursor() {
+        JobBusca job = new JobBusca();
+        job.setUtilizadorId(1L);
+        job.setCnae("5611201");
+        job.setRegiao("Bauru/SP");
+        job.setCursor("c1");
+        when(jobService.obter(5L)).thenReturn(Optional.of(job));
+        when(creditosService.disponivel(1L)).thenReturn(100L);   // tem créditos
+        when(cnpjProperties.getLimiteDefault()).thenReturn(40);
+        List<EmpresaPayload> novas = List.of();
+        when(fonteCnpj.buscarPaginaPorCnae("5611201", "Bauru/SP", "c1", 40))   // min(40, 100)
+                .thenReturn(new FonteCnpj.Pagina(novas, "c2"));
+
+        buscaService.carregarMais(5L, 1L);
+
+        verify(ingestaoService).ingerir(novas, 5L);
+        verify(jobService).registarCursor(5L, "c2");
+    }
+
+    @Test
+    void carregarMaisSemCursorNaoFazNada() {
+        JobBusca job = new JobBusca();
+        job.setUtilizadorId(1L);   // cursor null → esgotado
+        when(jobService.obter(5L)).thenReturn(Optional.of(job));
+
+        buscaService.carregarMais(5L, 1L);
+
+        verify(fonteCnpj, never()).buscarPaginaPorCnae(any(), any(), any(), anyInt());
+        verify(ingestaoService, never()).ingerir(any(), any());
+    }
+
+    @Test
+    void temMaisReflecteOCursor() {
+        JobBusca comCursor = new JobBusca();
+        comCursor.setUtilizadorId(1L);
+        comCursor.setCursor("c1");
+        when(jobService.obter(5L)).thenReturn(Optional.of(comCursor));
+        assertThat(buscaService.temMais(5L, 1L)).isTrue();
+
+        JobBusca semCursor = new JobBusca();
+        semCursor.setUtilizadorId(1L);
+        when(jobService.obter(6L)).thenReturn(Optional.of(semCursor));
+        assertThat(buscaService.temMais(6L, 1L)).isFalse();
+    }
+
     /** Job concluído do utilizador 1 com 2 leads: "Alfa" (contactável) e "Beta" (sem contato). */
     private void prepararDoisLeads() {
         JobBusca job = new JobBusca();
@@ -146,8 +203,8 @@ class BuscaServiceImplTest {
                 .thenReturn(List.of(new JobResultado(5L, 10L), new JobResultado(5L, 11L)));
         when(empresaRepository.findAllById(any())).thenReturn(List.of(e10, e11));
 
-        LeadResponse alfa = new LeadResponse(10L, "Alfa", "Lx", null, "+351910000000", null, null, true);
-        LeadResponse beta = new LeadResponse(11L, "Beta", "Lx", null, null, null, null, false);
+        LeadResponse alfa = new LeadResponse(10L, "Alfa", "Lx", null, "+351910000000", null, null, true, null);
+        LeadResponse beta = new LeadResponse(11L, "Beta", "Lx", null, null, null, null, false, null);
         lenient().when(leadMapper.toResponse(e10)).thenReturn(alfa);
         lenient().when(leadMapper.toResponse(e11)).thenReturn(beta);
     }

@@ -235,6 +235,35 @@ body {
 }
 .btn-export:hover { background: var(--azul); color: #fff; }
 
+/* --- Paginação da lista de resultados --- */
+.paginacao {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin: 20px 0 4px;
+}
+.btn-pag {
+    background: #fff;
+    color: var(--azul);
+    border: 1px solid var(--azul);
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.btn-pag:hover:not(:disabled) { background: var(--azul); color: #fff; }
+.btn-pag:disabled { opacity: .45; cursor: default; border-color: var(--cinza); color: var(--cinza); }
+.pag-info { color: var(--cinza); font-size: .9rem; }
+
+/* "Carregar mais" na mesma linha da paginação, em destaque (preenchido). */
+.btn-pag.btn-mais { background: var(--azul); color: #fff; }
+.btn-pag.btn-mais:hover:not(:disabled) { filter: brightness(1.08); }
+.htmx-indicator { display: none; }
+.htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display: inline; }
+
 .lista-leads { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .lead {
     display: flex;
@@ -451,3 +480,126 @@ body {
         transition-duration: .001ms !important;
     }
 }
+
+/* ============================================================
+   Landing page (pública) — classes .lp-*
+   ============================================================ */
+.lp-wrap { max-width: 1040px; margin: 0 auto; padding: 0 22px; }
+
+/* Navbar */
+.lp-nav { background: #fff; border-bottom: 1px solid var(--borda); position: sticky; top: 0; z-index: 10; }
+.lp-nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 22px; }
+.lp-marca { font-weight: 800; font-size: 1.35rem; letter-spacing: -.5px; color: var(--azul); text-decoration: none; }
+.lp-nav-acoes { display: flex; align-items: center; gap: 14px; }
+.lp-link { color: #334155; text-decoration: none; font-weight: 600; font-size: .95rem; }
+.lp-link:hover { color: var(--azul); }
+
+/* Hero */
+.lp-hero {
+    background: linear-gradient(135deg, var(--azul) 0%, var(--azul-escuro) 100%);
+    color: #fff; text-align: center; padding: 72px 0 84px;
+}
+.lp-eyebrow { text-transform: uppercase; letter-spacing: 1.5px; font-size: .78rem; font-weight: 700; opacity: .85; margin: 0 0 14px; }
+.lp-titulo { margin: 0; font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.1; letter-spacing: -1px; font-weight: 800; }
+.lp-titulo span { color: #bfdbfe; }
+.lp-sub { max-width: 660px; margin: 20px auto 0; font-size: 1.15rem; opacity: .92; }
+.lp-sub strong { color: #fff; }
+.lp-cta { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; margin-top: 30px; }
+.lp-nota { margin-top: 16px; font-size: .88rem; opacity: .8; }
+.lp-link-claro { color: #e0e7ff; text-decoration: none; font-weight: 600; }
+.lp-link-claro:hover { color: #fff; }
+.btn-grande { padding: 14px 30px; font-size: 1.05rem; }
+.lp-hero .btn, .lp-final .btn { background: #fff; color: var(--azul); }
+.lp-hero .btn:hover, .lp-final .btn:hover { background: #eef2ff; }
+
+/* Secções */
+.lp-seccao { padding: 60px 0; }
+.lp-h2 { text-align: center; font-size: 1.9rem; letter-spacing: -.5px; margin: 0 0 36px; }
+
+/* Grelha de valor */
+.lp-grelha { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+.lp-card { background: #fff; border: 1px solid var(--borda); border-radius: 14px; padding: 26px 22px; }
+.lp-card:hover { box-shadow: 0 8px 24px rgba(15, 23, 42, .06); }
+.lp-icone { font-size: 2rem; color: var(--azul); line-height: 0; }
+.lp-card h3 { margin: 12px 0 6px; font-size: 1.1rem; }
+.lp-card p { margin: 0; color: var(--cinza); font-size: .95rem; }
+
+/* Passos */
+.lp-passos-seccao { background: var(--fundo); border-top: 1px solid var(--borda); border-bottom: 1px solid var(--borda); }
+.lp-passos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 26px; }
+.lp-passo h3 { margin: 14px 0 6px; font-size: 1.1rem; }
+.lp-passo p { margin: 0; color: var(--cinza); }
+.lp-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--azul); color: #fff; font-weight: 800; font-size: 1.1rem;
+}
+
+/* Preço */
+.lp-preco-wrap { text-align: center; }
+.lp-preco-card {
+    max-width: 420px; margin: 0 auto; background: #fff;
+    border: 2px solid var(--azul); border-radius: 18px; padding: 34px 28px;
+    box-shadow: 0 12px 30px rgba(37, 99, 235, .12);
+}
+.lp-preco-leads { margin: 0; font-size: 1.4rem; }
+.lp-preco-leads strong { color: var(--azul); }
+.lp-preco-valor { margin: 8px 0 4px; font-size: 1.1rem; }
+.lp-preco-valor s { color: var(--cinza); }
+.lp-preco-valor strong { font-size: 2.4rem; letter-spacing: -1px; }
+.lp-preco-detalhe { color: var(--cinza); font-size: .92rem; margin: 6px 0 22px; }
+.lp-trust { text-align: center; color: var(--cinza); font-size: .86rem; margin-top: 26px; }
+
+/* CTA final */
+.lp-final { background: linear-gradient(135deg, var(--azul) 0%, var(--azul-escuro) 100%); color: #fff; text-align: center; padding: 64px 0; }
+.lp-final h2 { margin: 0 0 26px; font-size: 1.9rem; letter-spacing: -.5px; }
+
+/* Rodapé */
+.lp-rodape { background: #0f172a; color: #cbd5e1; padding: 28px 0; }
+.lp-rodape .lp-wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.lp-rodape .lp-marca { color: #fff; }
+.lp-rodape-txt { font-size: .9rem; }
+
+/* --- Landing: secções ricas --- */
+.lp-esconde-mobile { }
+@media (max-width: 760px) { .lp-esconde-mobile { display: none; } }
+
+/* "O que recebe" — texto + mockup lado a lado */
+.lp-split { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
+@media (max-width: 820px) { .lp-split { grid-template-columns: 1fr; gap: 34px; } }
+.lp-h2-esq { text-align: left; font-size: 1.9rem; letter-spacing: -.5px; margin: 0 0 12px; }
+.lp-lead { color: var(--cinza); font-size: 1.05rem; margin: 0 0 20px; }
+.lp-campos { list-style: none; margin: 0; padding: 0; }
+.lp-campos li { display: flex; align-items: flex-start; gap: 10px; margin: 11px 0; }
+.lp-campos li svg { color: var(--ok); flex: none; margin-top: 3px; }
+.lp-quando { color: var(--cinza); font-size: .85rem; font-style: italic; }
+
+/* Exemplo de lead (mockup) */
+.lp-mockup { background: #fff; border: 1px solid var(--borda); border-radius: 14px; padding: 22px 24px; box-shadow: 0 16px 40px rgba(15, 23, 42, .10); }
+.lp-mockup-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.lp-mockup-topo h3 { margin: 0; font-size: 1.12rem; }
+.lp-mockup-sub { margin: 2px 0 12px; color: var(--cinza); font-size: .9rem; }
+.lp-mockup-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.lp-mockup-dados { display: grid; grid-template-columns: 84px 1fr; gap: 6px 12px; margin: 0; font-size: .9rem; }
+.lp-mockup-dados dt { color: var(--cinza); }
+.lp-mockup-dados dd { margin: 0; }
+
+/* Personas */
+.lp-personas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.lp-personas .lp-card p { font-size: 1rem; }
+
+/* Lista dentro do card de preço */
+.lp-preco-lista { list-style: none; margin: 0 auto 22px; padding: 0; text-align: left; max-width: 300px; }
+.lp-preco-lista li { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: .92rem; }
+.lp-preco-lista li svg { color: var(--ok); flex: none; }
+
+/* FAQ (accordion) */
+.lp-faq-wrap { max-width: 760px; }
+.lp-faq details { background: #fff; border: 1px solid var(--borda); border-radius: 10px; margin-bottom: 10px; padding: 0 18px; }
+.lp-faq summary { cursor: pointer; font-weight: 600; padding: 15px 24px 15px 0; list-style: none; position: relative; }
+.lp-faq summary::-webkit-details-marker { display: none; }
+.lp-faq summary::after { content: '+'; position: absolute; right: 2px; top: 13px; color: var(--azul); font-size: 1.4rem; line-height: 1; }
+.lp-faq details[open] summary::after { content: '\2212'; }
+.lp-faq details p { margin: 0 0 16px; color: var(--cinza); }
+
+.lp-final-sub { margin: 0 0 24px; opacity: .9; }

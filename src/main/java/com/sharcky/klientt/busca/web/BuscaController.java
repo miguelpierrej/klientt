@@ -2,13 +2,17 @@ package com.sharcky.klientt.busca.web;
 
 import com.sharcky.klientt.busca.dto.BuscaRequest;
 import com.sharcky.klientt.busca.dto.FiltroBusca;
+import com.sharcky.klientt.busca.dto.LeadResponse;
 import com.sharcky.klientt.busca.dto.OrdenarPor;
+import com.sharcky.klientt.busca.dto.PaginaLeads;
 import com.sharcky.klientt.busca.dto.ResultadoBusca;
 import com.sharcky.klientt.busca.dto.TipoBusca;
 import com.sharcky.klientt.busca.service.BuscaService;
 import com.sharcky.klientt.cnae.ResolvedorCnae;
 import com.sharcky.klientt.conta.seguranca.KlienttUserDetails;
+import com.sharcky.klientt.conta.service.CreditosService;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -27,14 +31,21 @@ public class BuscaController {
 
     private final BuscaService buscaService;
     private final ResolvedorCnae resolvedorCnae;
+    private final CreditosService creditosService;
+    /** Leads por página na lista de resultados (klientt.busca.tamanho-pagina, default 20). */
+    private final int tamanhoPagina;
 
-    public BuscaController(BuscaService buscaService, ResolvedorCnae resolvedorCnae) {
+    public BuscaController(BuscaService buscaService, ResolvedorCnae resolvedorCnae,
+                           CreditosService creditosService,
+                           @Value("${klientt.busca.tamanho-pagina:20}") int tamanhoPagina) {
         this.buscaService = buscaService;
         this.resolvedorCnae = resolvedorCnae;
+        this.creditosService = creditosService;
+        this.tamanhoPagina = tamanhoPagina;
     }
 
-    /** Página principal com o formulário de busca. */
-    @GetMapping("/")
+    /** App: formulário de busca (autenticado). A raiz "/" é a landing page pública. */
+    @GetMapping("/app")
     public String index() {
         return "busca";
     }
@@ -95,13 +106,16 @@ public class BuscaController {
             return "fragments/resultados :: erro";
         }
         if (resultado.concluido()) {
-            model.addAttribute("leads", resultado.leads());
+            adicionarPagina(model, resultado.leads(), 1);
+            model.addAttribute("podeCarregarMais", buscaService.temMais(jobId, utilizador.getId()));
+            model.addAttribute("temCreditos", creditosService.temDisponivel(utilizador.getId()));
             model.addAttribute("termo", resultado.termo());
             model.addAttribute("jobId", jobId);
             return "fragments/resultados :: lista";
         }
         if (!resultado.leads().isEmpty()) {
-            model.addAttribute("leads", resultado.leads());
+            adicionarPagina(model, resultado.leads(), 1);
+            model.addAttribute("streaming", true);   // durante o streaming não mostra paginação
             model.addAttribute("termo", resultado.termo());
             model.addAttribute("jobId", jobId);
             return "fragments/resultados :: parcial";
@@ -117,10 +131,48 @@ public class BuscaController {
     public String filtrar(@PathVariable Long jobId,
                           @RequestParam(required = false) OrdenarPor ordenar,
                           @RequestParam(defaultValue = "false") boolean comContato,
+                          @RequestParam(defaultValue = "1") int pagina,
                           @AuthenticationPrincipal KlienttUserDetails utilizador,
                           Model model) {
         FiltroBusca filtro = new FiltroBusca(ordenar, comContato);
-        model.addAttribute("leads", buscaService.filtrar(jobId, utilizador.getId(), filtro));
+        List<LeadResponse> todos = buscaService.filtrar(jobId, utilizador.getId(), filtro);
+        model.addAttribute("jobId", jobId);
+        model.addAttribute("ordenar", filtro.ordenarOuPadrao());
+        model.addAttribute("comContato", comContato);
+        model.addAttribute("pagina", PaginaLeads.de(todos, pagina, tamanhoPagina));
+        model.addAttribute("podeCarregarMais", buscaService.temMais(jobId, utilizador.getId()));
+        model.addAttribute("temCreditos", creditosService.temDisponivel(utilizador.getId()));
         return "fragments/resultados :: leads";
+    }
+
+    /**
+     * "Carregar mais": vai buscar a próxima página à fonte (via cursor) e devolve a página seguinte
+     * já com os novos resultados.
+     */
+    @GetMapping("/buscar/{jobId}/mais")
+    public String carregarMais(@PathVariable Long jobId,
+                               @RequestParam(required = false) OrdenarPor ordenar,
+                               @RequestParam(defaultValue = "false") boolean comContato,
+                               @RequestParam(defaultValue = "1") int pagina,
+                               @AuthenticationPrincipal KlienttUserDetails utilizador,
+                               Model model) {
+        Long uid = utilizador.getId();
+        buscaService.carregarMais(jobId, uid);
+        FiltroBusca filtro = new FiltroBusca(ordenar, comContato);
+        List<LeadResponse> todos = buscaService.filtrar(jobId, uid, filtro);
+        model.addAttribute("jobId", jobId);
+        model.addAttribute("ordenar", filtro.ordenarOuPadrao());
+        model.addAttribute("comContato", comContato);
+        model.addAttribute("pagina", PaginaLeads.de(todos, pagina + 1, tamanhoPagina));   // salta p/ a nova página
+        model.addAttribute("podeCarregarMais", buscaService.temMais(jobId, uid));
+        model.addAttribute("temCreditos", creditosService.temDisponivel(uid));
+        return "fragments/resultados :: leads";
+    }
+
+    /** Adiciona ao modelo a página de leads + o estado de filtro (para os links de paginação). */
+    private void adicionarPagina(Model model, List<LeadResponse> leads, int pagina) {
+        model.addAttribute("pagina", PaginaLeads.de(leads, pagina, tamanhoPagina));
+        model.addAttribute("ordenar", OrdenarPor.RELEVANCIA);
+        model.addAttribute("comContato", false);
     }
 }

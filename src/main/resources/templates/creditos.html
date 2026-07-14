@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klientt — comprar leads</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script th:if="${disponivel}" src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+<header class="topo">
+    <div class="container barra-topo">
+        <div>
+            <h1 class="logo">Klientt</h1>
+            <p class="tagline">Comprar leads</p>
+        </div>
+        <div class="utilizador">
+            <a class="btn-link" th:href="@{/app}">Buscar</a>
+            <a class="btn-link" th:href="@{/conta}">A minha conta</a>
+        </div>
+    </div>
+</header>
+
+<main class="container conta">
+    <h2>Comprar leads</h2>
+    <p class="ajuda">Saldo atual: <strong th:text="${saldo}">0</strong> leads disponíveis.</p>
+
+    <div class="cartao-conta">
+        <h3><strong th:text="${leadsPorPacote}">3000</strong> leads</h3>
+        <p class="plano-preco"><s>R$ 49,90</s> &nbsp;<strong>R$ 29,90</strong></p>
+        <p class="ajuda">Pagamento único. Os leads acumulam a cada compra.</p>
+    </div>
+
+    <p class="aviso erro" th:unless="${disponivel}">
+        Pagamentos ainda não estão configurados neste ambiente. Volte mais tarde.
+    </p>
+
+    <!-- Checkout embutido do Stripe -->
+    <div id="checkout" th:if="${disponivel}"></div>
+</main>
+
+<script th:if="${disponivel}" th:inline="javascript">
+    const stripe = Stripe([[${publishableKey}]]);
+    async function fetchClientSecret() {
+        const resp = await fetch('/creditos/checkout');
+        const data = await resp.json();
+        return data.clientSecret;
+    }
+    stripe.initEmbeddedCheckout({ fetchClientSecret })
+        .then((checkout) => checkout.mount('#checkout'));
+</script>
+</body>
+</html>

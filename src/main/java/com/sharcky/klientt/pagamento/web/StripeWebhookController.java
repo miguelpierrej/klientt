@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Webhook da Stripe (eventos de subscrição). Autenticado pela assinatura Stripe-Signature,
+ * Webhook Stripe (pagamento concluído → credita leads). Autenticado pela assinatura Stripe-Signature,
  * por isso é público e isento de CSRF (ver SecurityConfig).
  */
 @RestController

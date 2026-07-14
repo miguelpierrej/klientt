@@ -79,15 +79,38 @@ public class Empresa {
     @Column(name = "optante_mei")
     private Boolean optanteMei;
 
+    // --- Sinais de presença digital (Google Maps, via enriquecimento) ---
+    /** Nota do Google (0–5), quando encontrada no Maps. */
+    private Double nota;
+
+    /** Nº de avaliações no Google, quando encontrado no Maps. */
+    private Integer avaliacoes;
+
     @Column(name = "atualizado_em", nullable = false)
     private LocalDateTime atualizadoEm = LocalDateTime.now();
 
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Contato> contatos = new ArrayList<>();
 
+    @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<EmpresaRede> redes = new ArrayList<>();
+
+    @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<EmpresaSocio> socios = new ArrayList<>();
+
     public void adicionarContato(Contato contato) {
         contato.setEmpresa(this);
         this.contatos.add(contato);
+    }
+
+    public void adicionarRede(EmpresaRede rede) {
+        rede.setEmpresa(this);
+        this.redes.add(rede);
+    }
+
+    public void adicionarSocio(EmpresaSocio socio) {
+        socio.setEmpresa(this);
+        this.socios.add(socio);
     }
 
     /** Tem pelo menos um canal de contacto direto (telefone/whatsapp/email)? */

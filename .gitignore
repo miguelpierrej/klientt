@@ -33,7 +33,5 @@ build/
 .vscode/
 
 ### Segredos / configs locais (NÃO commitar) ###
-src/main/resources/application-dev.properties
-src/main/resources/application-local.properties
 *.env
 .env

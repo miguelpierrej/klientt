@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Controller
 public class ExportController {
@@ -41,8 +42,10 @@ public class ExportController {
         List<LeadDetalhe> leads = buscaService.exportar(jobId, utilizador.getId(), filtro);
         byte[] csv = csvWriter.escrever(leads);
 
+        // Sufixo de 4 dígitos aleatórios (0000–9999) para o nome do ficheiro.
+        String sufixo = String.format("%04d", ThreadLocalRandom.current().nextInt(10_000));
         ContentDisposition disposition = ContentDisposition.attachment()
-                .filename("leads-" + jobId + ".csv").build();
+                .filename("leads-" + sufixo + ".csv").build();
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                 .contentType(CSV)

@@ -30,6 +30,12 @@ public record LeadDetalhe(
         String naturezaJuridica,
         String cnaePrincipal,
         Boolean optanteSimples,
-        Boolean optanteMei
+        Boolean optanteMei,
+        // presença digital (enriquecimento por scraper)
+        Double nota,
+        Integer avaliacoes,
+        List<RedeView> redes,
+        // sócios (QSA)
+        List<SocioView> socios
 ) {
 }

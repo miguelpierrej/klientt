@@ -23,10 +23,25 @@ class SecurityIntegrationTest {
     MockMvc mvc;
 
     @Test
-    void homeSemLoginRedirecionaParaLogin() throws Exception {
+    void landingEPublica() throws Exception {
         mvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Klientt")));
+    }
+
+    @Test
+    void appSemLoginRedirecionaParaLogin() throws Exception {
+        mvc.perform(get("/app"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login"));
+    }
+
+    @Test
+    void pedidoHtmxSemLoginDevolveHxRedirect() throws Exception {
+        // Sessão expirada num pedido HTMX → HX-Redirect (recarrega a página inteira), não 302.
+        mvc.perform(get("/app").header("HX-Request", "true"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("HX-Redirect", "/login?expirou"));
     }
 
     @Test
@@ -55,7 +70,7 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    void loginValidoDaAcessoAContaComOPlano() throws Exception {
+    void loginValidoDaAcessoAContaComCreditos() throws Exception {
         MockHttpSession session = (MockHttpSession) mvc.perform(
                         formLogin("/login").user("dev@klientt.com").password("dev12345"))
                 .andExpect(authenticated())
@@ -63,6 +78,6 @@ class SecurityIntegrationTest {
 
         mvc.perform(get("/conta").session(session))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Agency")));   // utilizador de dev: plano Agency
+                .andExpect(content().string(containsString("Créditos de leads")));   // /conta mostra saldo
     }
 }

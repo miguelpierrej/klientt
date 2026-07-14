@@ -25,7 +25,7 @@ public class ClienteCnpjProperties {
     /** Token/chave do fornecedor. */
     private String apiKey = "";
 
-    /** Limite default de empresas por busca (controla o saldo gasto por pesquisa). */
+    /** Tamanho do lote de cada "carregar mais" (a 1ª página é regida por klientt.busca.tamanho-pagina). */
     private int limiteDefault = 25;
 
     public boolean isConfigurado() {

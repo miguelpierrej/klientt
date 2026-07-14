@@ -1,8 +1,10 @@
 package com.sharcky.klientt.empresa.mapper;
 
 import com.sharcky.klientt.cnpj.dto.EmpresaPayload;
+import com.sharcky.klientt.cnpj.dto.SocioPayload;
 import com.sharcky.klientt.empresa.model.Contato;
 import com.sharcky.klientt.empresa.model.Empresa;
+import com.sharcky.klientt.empresa.model.EmpresaSocio;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -20,6 +22,7 @@ public interface EmpresaPayloadMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "atualizadoEm", ignore = true)
     @Mapping(target = "contatos", ignore = true)
+    @Mapping(target = "socios", ignore = true)
     @Mapping(target = "razaoSocial", source = "cadastrais.razaoSocial")
     @Mapping(target = "nomeFantasia", source = "cadastrais.nomeFantasia")
     @Mapping(target = "situacaoCadastral", source = "cadastrais.situacaoCadastral")
@@ -37,6 +40,26 @@ public interface EmpresaPayloadMapper {
     default void preencherContatos(@MappingTarget Empresa empresa, EmpresaPayload payload) {
         adicionarContatos(empresa, "telefone", payload.telefones());
         adicionarContatos(empresa, "email", payload.emails());
+    }
+
+    /** Acrescenta os sócios (QSA), dedup por nome. */
+    @AfterMapping
+    default void preencherSocios(@MappingTarget Empresa empresa, EmpresaPayload payload) {
+        if (payload.socios() == null) {
+            return;
+        }
+        for (SocioPayload s : payload.socios()) {
+            if (s.nome() == null || s.nome().isBlank()
+                    || empresa.getSocios().stream().anyMatch(x -> s.nome().equalsIgnoreCase(x.getNome()))) {
+                continue;
+            }
+            EmpresaSocio socio = new EmpresaSocio();
+            socio.setNome(s.nome().trim());
+            socio.setQualificacao(s.qualificacao());
+            socio.setFaixaEtaria(s.faixaEtaria());
+            socio.setDesde(s.desde());
+            empresa.adicionarSocio(socio);
+        }
     }
 
     private static void adicionarContatos(Empresa empresa, String tipo, List<String> valores) {

@@ -137,7 +137,7 @@ public class ApiGeridaCnpjFonte implements FonteCnpj {
         String email = emails.isEmpty() ? null : emails.get(0);
 
         return new EmpresaPayload(nome, e.cnpj(), telefone, email,
-                endereco, cidade, null, lat, lng, cadastrais, telefones, emails);
+                endereco, cidade, null, lat, lng, cadastrais, telefones, emails, List.of());
     }
 
     /** Todos os telefones (sem duplicados, na ordem da Receita). */

@@ -5,13 +5,10 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- * Configuração da integração Stripe (klientt.stripe.*).
- * Sem uma secret key real (sk_...), a integração fica em "modo desligado":
- * a app arranca e o resto funciona; o pagamento mostra aviso.
+ * Configuração Stripe (klientt.stripe.*) — compra de créditos de leads (pagamento único).
+ * Sem uma chave válida ({@code sk_}/{@code rk_}), fica em modo desligado (a app arranca; o botão
+ * de compra mostra "indisponível").
  */
 @Component
 @ConfigurationProperties(prefix = "klientt.stripe")
@@ -19,29 +16,19 @@ import java.util.Map;
 @Setter
 public class StripeProperties {
 
+    /** Chave secreta ou restrita (recomendado RAK, {@code rk_}). */
     private String secretKey = "";
     private String publishableKey = "";
     private String webhookSecret = "";
-    private String currency = "brl";
 
-    /** Mapa nome-do-plano → Stripe Price ID (ex.: Pro → price_123). */
-    private Map<String, String> prices = new HashMap<>();
+    /** Price ID do pacote de créditos (criado na dashboard Stripe). */
+    private String priceId = "";
 
-    /** Considera-se ligado quando há uma secret key Stripe válida. */
+    /** Leads que cada compra concede. */
+    private int leadsPorPacote = 3000;
+
+    /** Considera-se ligado quando há uma chave secreta/restrita. */
     public boolean isEnabled() {
-        return secretKey != null && secretKey.startsWith("sk_");
-    }
-
-    public String priceId(String plano) {
-        return prices.get(plano);
-    }
-
-    /** Plano correspondente a um Price ID (reverso do mapa) — usado no webhook. */
-    public String planoDoPrice(String priceId) {
-        return prices.entrySet().stream()
-                .filter(e -> e.getValue().equals(priceId))
-                .map(Map.Entry::getKey)
-                .findFirst()
-                .orElse(null);
+        return secretKey != null && (secretKey.startsWith("sk_") || secretKey.startsWith("rk_"));
     }
 }

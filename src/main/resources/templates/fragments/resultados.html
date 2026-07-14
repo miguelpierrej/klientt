@@ -105,14 +105,14 @@
     </div>
 </div>
 
-<!-- Lista de leads (re-renderizada pelos filtros) -->
+<!-- Lista de leads (re-renderizada pelos filtros e pela paginação) -->
 <div th:fragment="leads">
-    <p class="contagem"><strong th:text="${#lists.size(leads)}">0</strong> empresas</p>
+    <p class="contagem"><strong th:text="${pagina.total()}">0</strong> empresas</p>
 
-    <p class="vazio" th:if="${#lists.isEmpty(leads)}">Nenhuma empresa corresponde aos filtros.</p>
+    <p class="vazio" th:if="${pagina.total() == 0}">Nenhuma empresa corresponde aos filtros.</p>
 
-    <ul class="lista-leads" th:unless="${#lists.isEmpty(leads)}">
-        <li class="lead clicavel" th:each="lead : ${leads}"
+    <ul class="lista-leads" th:unless="${pagina.total() == 0}">
+        <li class="lead clicavel" th:each="lead : ${pagina.leads()}"
             th:attr="hx-get=@{/empresa/{id}(id=${lead.id()})}"
             hx-target="#modal-container" hx-swap="innerHTML" title="Ver detalhes">
             <div class="lead-info">
@@ -121,12 +121,37 @@
                 <div class="sinais">
                     <span class="tag" th:classappend="${lead.contactavel()} ? ' ok' : ' alerta'"
                           th:text="${lead.contactavel()} ? 'Com contato' : 'Sem contato'">contato</span>
+                    <span class="tag" th:if="${lead.nota()}"><svg th:replace="~{fragments/icones :: estrela}"></svg>
+                        <span th:text="${#numbers.formatDecimal(lead.nota(), 1, 1)}">4.5</span></span>
                     <span class="tag" th:if="${lead.porte()}" th:text="${lead.porte()}">porte</span>
                     <span class="tag" th:if="${lead.telefone()}" th:text="${lead.telefone()}">telefone</span>
                 </div>
             </div>
         </li>
     </ul>
+
+    <!-- Paginação numa linha centrada. Na última página, "Carregar mais" toma o lugar do "Seguinte". -->
+    <nav class="paginacao" aria-label="Paginação"
+         th:if="${(pagina.totalPaginas() > 1 or podeCarregarMais == true) and streaming != true}">
+        <button type="button" class="btn-pag" th:if="${pagina.temAnterior()}"
+                th:attr="hx-get=@{/buscar/{id}/resultados(id=${jobId}, ordenar=${ordenar}, comContato=${comContato}, pagina=${pagina.anterior()})}"
+                hx-target="#leads-container" hx-swap="innerHTML">&lsaquo; Anterior</button>
+        <span class="pag-info" th:if="${pagina.totalPaginas() > 1}">Página <strong th:text="${pagina.pagina()}">1</strong>
+            de <span th:text="${pagina.totalPaginas()}">1</span></span>
+        <button type="button" class="btn-pag" th:if="${pagina.temSeguinte()}"
+                th:attr="hx-get=@{/buscar/{id}/resultados(id=${jobId}, ordenar=${ordenar}, comContato=${comContato}, pagina=${pagina.seguinte()})}"
+                hx-target="#leads-container" hx-swap="innerHTML">Seguinte &rsaquo;</button>
+
+        <!-- Última página com mais na fonte → toma o lugar do "Seguinte".
+             Com créditos: carrega mais. Sem créditos: leva à compra ("1ª página grátis"). -->
+        <button type="button" class="btn-pag btn-mais"
+                th:if="${podeCarregarMais == true and !pagina.temSeguinte() and temCreditos == true}"
+                th:attr="hx-get=@{/buscar/{id}/mais(id=${jobId}, ordenar=${ordenar}, comContato=${comContato}, pagina=${pagina.pagina()})}"
+                hx-target="#leads-container" hx-swap="innerHTML" hx-indicator="#mais-ind">Carregar mais empresas</button>
+        <a th:if="${podeCarregarMais == true and !pagina.temSeguinte() and temCreditos != true}"
+           th:href="@{/creditos}" class="btn-pag btn-mais">Comprar leads para ver mais &rarr;</a>
+        <span id="mais-ind" class="htmx-indicator ajuda">a procurar mais…</span>
+    </nav>
 </div>
 
 <!-- Confirmação do CNAE (busca por nicho): escolher a atividade antes de buscar -->

@@ -18,4 +18,20 @@ public interface FonteCnpj {
 
     /** Busca textual por nome (razão social / nome fantasia). */
     List<EmpresaPayload> buscarPorNome(String nome, String municipio, int limite);
+
+    /**
+     * Página de descoberta para "carregar mais": empresas + {@code cursor} de continuação
+     * ({@code null}/vazio = não há mais). Usado para paginar na origem sem re-buscar.
+     */
+    record Pagina(List<EmpresaPayload> empresas, String cursor) {
+    }
+
+    /**
+     * Busca uma página por CNAE a partir de {@code cursor} ({@code null} = início).
+     * Default (fontes sem cursor): devolve a 1ª página para cursor nulo, nada para um cursor.
+     */
+    default Pagina buscarPaginaPorCnae(String cnae, String municipio, String cursor, int tamanho) {
+        List<EmpresaPayload> empresas = cursor == null ? buscarPorCnae(cnae, municipio, tamanho) : List.of();
+        return new Pagina(empresas, null);
+    }
 }

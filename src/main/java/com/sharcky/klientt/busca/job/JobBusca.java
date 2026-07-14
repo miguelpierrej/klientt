@@ -35,6 +35,15 @@ public class JobBusca {
     @Column(length = 120)
     private String regiao;
 
+    /** CNAE confirmado (NICHO) — para "carregar mais" continuar a mesma busca. */
+    @Column(length = 20)
+    private String cnae;
+
+    /** Cursor da fonte (Minha Receita) para a próxima página; null = não há mais.
+     *  Coluna cursor_fonte porque {@code cursor} é palavra reservada no MySQL. */
+    @Column(name = "cursor_fonte", length = 100)
+    private String cursor;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private EstadoJob estado = EstadoJob.PENDENTE;

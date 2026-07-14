@@ -26,6 +26,7 @@ public class JobServiceImpl implements JobService {
         job.setTipo(request.tipo());
         job.setTermo(request.termo());
         job.setRegiao(request.regiao());
+        job.setCnae(request.cnae());
         job.setEstado(EstadoJob.A_PROCESSAR);
         return jobRepository.save(job).getId();
     }
@@ -41,6 +42,12 @@ public class JobServiceImpl implements JobService {
     public void registarResultado(Long jobId, Long empresaId) {
         // save() faz merge (chave atribuída): reenvios atualizam em vez de duplicar.
         resultadoRepository.save(new JobResultado(jobId, empresaId));
+    }
+
+    @Override
+    @Transactional
+    public void registarCursor(Long jobId, String cursor) {
+        jobRepository.findById(jobId).ifPresent(job -> job.setCursor(cursor));
     }
 
     @Override

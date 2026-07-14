@@ -24,4 +24,10 @@ public interface BuscaService {
 
     /** Leads completos (para exportação), com os mesmos filtros/ordenação. */
     List<LeadDetalhe> exportar(Long jobId, Long utilizadorId, FiltroBusca filtro);
+
+    /** Vai buscar a próxima página à fonte (via cursor) e acrescenta-a ao job. */
+    void carregarMais(Long jobId, Long utilizadorId);
+
+    /** Há mais empresas para "carregar mais" (o job tem cursor de continuação)? */
+    boolean temMais(Long jobId, Long utilizadorId);
 }

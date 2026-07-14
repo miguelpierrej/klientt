@@ -19,6 +19,7 @@
 
     <p class="aviso ok" th:if="${param.registado}">Conta criada! Já pode entrar.</p>
     <p class="aviso ok" th:if="${param.logout}">Sessão terminada.</p>
+    <p class="aviso erro" th:if="${param.expirou}">A sua sessão expirou. Entre novamente.</p>
     <p class="aviso erro" th:if="${param.error}">Email ou password inválidos.</p>
 
     <form method="post" th:action="@{/login}" class="form-conta">

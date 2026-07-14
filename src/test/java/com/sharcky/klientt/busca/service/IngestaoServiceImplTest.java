@@ -66,6 +66,6 @@ class IngestaoServiceImplTest {
 
     private List<EmpresaPayload> umaEmpresa() {
         return List.of(new EmpresaPayload("Bar X", null, null, "contato@barx.test", null,
-                "Lisboa", null, null, null, null, List.of(), List.of("contato@barx.test")));
+                "Lisboa", null, null, null, null, List.of(), List.of("contato@barx.test"), List.of()));
     }
 }

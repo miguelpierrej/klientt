@@ -1,19 +1,17 @@
 package com.sharcky.klientt.pagamento.service;
 
-import com.sharcky.klientt.conta.model.Utilizador;
-import com.sharcky.klientt.conta.repository.PlanoRepository;
-import com.sharcky.klientt.conta.repository.UtilizadorRepository;
+import com.sharcky.klientt.conta.service.CreditosService;
 import com.sharcky.klientt.pagamento.config.StripeProperties;
-import com.sharcky.klientt.pagamento.dto.SubscricaoIntent;
+import com.sharcky.klientt.pagamento.model.Pagamento;
+import com.sharcky.klientt.pagamento.repository.PagamentoRepository;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
-import com.stripe.model.Customer;
 import com.stripe.model.Event;
-import com.stripe.model.Invoice;
-import com.stripe.model.Subscription;
+import com.stripe.model.EventDataObjectDeserializer;
+import com.stripe.model.StripeObject;
+import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
-import com.stripe.param.CustomerCreateParams;
-import com.stripe.param.SubscriptionCreateParams;
+import com.stripe.param.checkout.SessionCreateParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -23,76 +21,47 @@ import org.springframework.transaction.annotation.Transactional;
 public class PagamentoServiceImpl implements PagamentoService {
 
     private static final Logger log = LoggerFactory.getLogger(PagamentoServiceImpl.class);
-    private static final String PLANO_GRATIS = "Teste";
 
     private final StripeProperties stripe;
-    private final UtilizadorRepository utilizadorRepository;
-    private final PlanoRepository planoRepository;
+    private final PagamentoRepository pagamentoRepository;
+    private final CreditosService creditosService;
 
-    public PagamentoServiceImpl(StripeProperties stripe, UtilizadorRepository utilizadorRepository,
-                                PlanoRepository planoRepository) {
+    public PagamentoServiceImpl(StripeProperties stripe, PagamentoRepository pagamentoRepository,
+                                CreditosService creditosService) {
         this.stripe = stripe;
-        this.utilizadorRepository = utilizadorRepository;
-        this.planoRepository = planoRepository;
+        this.pagamentoRepository = pagamentoRepository;
+        this.creditosService = creditosService;
     }
 
     @Override
     public boolean disponivel() {
-        return stripe.isEnabled();
+        return stripe.isEnabled() && stripe.getPriceId() != null && !stripe.getPriceId().isBlank();
     }
 
     @Override
-    @Transactional
-    public SubscricaoIntent iniciarSubscricao(Long utilizadorId, String planoNome) {
-        if (!stripe.isEnabled()) {
+    public String criarCheckout(Long utilizadorId, String returnUrlBase) {
+        if (!disponivel()) {
             throw new PagamentoIndisponivelException("Pagamentos não estão configurados.");
         }
-        String priceId = stripe.priceId(planoNome);
-        if (priceId == null || priceId.isBlank()) {
-            throw new PagamentoIndisponivelException("Plano sem preço Stripe configurado: " + planoNome);
-        }
-        Utilizador u = utilizadorRepository.findById(utilizadorId)
-                .orElseThrow(() -> new IllegalArgumentException("Utilizador não encontrado: " + utilizadorId));
-
         Stripe.apiKey = stripe.getSecretKey();
         try {
-            String customerId = garantirCliente(u);
-
-            SubscriptionCreateParams params = SubscriptionCreateParams.builder()
-                    .setCustomer(customerId)
-                    .addItem(SubscriptionCreateParams.Item.builder().setPrice(priceId).build())
-                    .setPaymentBehavior(SubscriptionCreateParams.PaymentBehavior.DEFAULT_INCOMPLETE)
-                    .setPaymentSettings(SubscriptionCreateParams.PaymentSettings.builder()
-                            .setSaveDefaultPaymentMethod(
-                                    SubscriptionCreateParams.PaymentSettings.SaveDefaultPaymentMethod.ON_SUBSCRIPTION)
+            SessionCreateParams params = SessionCreateParams.builder()
+                    .setMode(SessionCreateParams.Mode.PAYMENT)          // pagamento único
+                    .setUiMode(SessionCreateParams.UiMode.EMBEDDED)     // UI Stripe no nosso site
+                    .setReturnUrl(returnUrlBase + "?session_id={CHECKOUT_SESSION_ID}")
+                    .addLineItem(SessionCreateParams.LineItem.builder()
+                            .setPrice(stripe.getPriceId())
+                            .setQuantity(1L)
                             .build())
-                    .addExpand("latest_invoice.confirmation_secret")
+                    // NÃO definir payment_method_types → métodos dinâmicos (cartão, Pix…).
+                    .putMetadata("utilizadorId", String.valueOf(utilizadorId))
+                    .putMetadata("leads", String.valueOf(stripe.getLeadsPorPacote()))
                     .build();
-
-            Subscription sub = Subscription.create(params);
-            u.setStripeSubscriptionId(sub.getId());
-            u.setSubscriptionStatus(sub.getStatus());
-            utilizadorRepository.save(u);
-
-            Invoice invoice = sub.getLatestInvoiceObject();
-            String clientSecret = invoice.getConfirmationSecret().getClientSecret();
-            return new SubscricaoIntent(clientSecret, stripe.getPublishableKey(), planoNome);
+            return Session.create(params).getClientSecret();
         } catch (StripeException ex) {
-            log.error("Erro Stripe ao criar subscrição (user={}, plano={})", utilizadorId, planoNome, ex);
+            log.error("Erro Stripe ao criar checkout (user={})", utilizadorId, ex);
             throw new PagamentoIndisponivelException("Falha ao iniciar o pagamento. Tente novamente.");
         }
-    }
-
-    private String garantirCliente(Utilizador u) throws StripeException {
-        if (u.getStripeCustomerId() != null) {
-            return u.getStripeCustomerId();
-        }
-        Customer cliente = Customer.create(CustomerCreateParams.builder()
-                .setEmail(u.getEmail())
-                .setName(u.getNome())
-                .build());
-        u.setStripeCustomerId(cliente.getId());
-        return cliente.getId();
     }
 
     @Override
@@ -101,38 +70,120 @@ public class PagamentoServiceImpl implements PagamentoService {
         if (!stripe.isEnabled()) {
             return;
         }
+        if (assinatura == null || assinatura.isBlank()) {
+            // Pedido sem cabeçalho Stripe-Signature → não veio da Stripe (ex.: teste manual/curl).
+            log.warn("Pedido a /api/stripe/webhook sem cabeçalho Stripe-Signature — ignorado (não é da Stripe).");
+            throw new PagamentoIndisponivelException("Sem assinatura Stripe.");
+        }
         Event event;
         try {
             event = Webhook.constructEvent(payload, assinatura, stripe.getWebhookSecret());
         } catch (Exception ex) {
-            log.warn("Webhook Stripe inválido: {}", ex.getMessage());
+            log.warn("Webhook Stripe inválido (assinatura não confere com o STRIPE_WEBHOOK_SECRET?): {}", ex.getMessage());
             throw new PagamentoIndisponivelException("Assinatura do webhook inválida.");
         }
 
-        if (event.getType().startsWith("customer.subscription.")) {
-            event.getDataObjectDeserializer().getObject()
-                    .filter(Subscription.class::isInstance)
-                    .map(Subscription.class::cast)
-                    .ifPresent(this::aplicarSubscricao);
+        String tipo = event.getType();
+        log.info("Webhook Stripe recebido: {} ({})", tipo, event.getId());
+        if (!"checkout.session.completed".equals(tipo) && !"checkout.session.async_payment_succeeded".equals(tipo)) {
+            return;   // ignora outros eventos
+        }
+
+        // getObject() devolve vazio quando a versão de API da conta difere da do SDK — nesse caso,
+        // desserializa "unsafe" (best-effort). Sem isto, o crédito falha em silêncio (200 sem creditar).
+        EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+        StripeObject obj;
+        if (deserializer.getObject().isPresent()) {
+            obj = deserializer.getObject().get();
+        } else {
+            try {
+                obj = deserializer.deserializeUnsafe();
+            } catch (Exception ex) {
+                log.warn("Não foi possível desserializar o evento {} ({}): {}", tipo, event.getId(), ex.getMessage());
+                return;
+            }
+        }
+
+        if (obj instanceof Session session && "paid".equals(session.getPaymentStatus())) {
+            creditar(session);
+        } else {
+            String status = obj instanceof Session s ? s.getPaymentStatus() : "n/a";
+            log.info("Webhook {} sem crédito (payment_status={})", tipo, status);
         }
     }
 
-    private void aplicarSubscricao(Subscription sub) {
-        utilizadorRepository.findByStripeCustomerId(sub.getCustomer()).ifPresent(u -> {
-            u.setSubscriptionStatus(sub.getStatus());
-            u.setStripeSubscriptionId(sub.getId());
+    @Override
+    @Transactional
+    public int confirmarPagamento(String sessionId, Long utilizadorId) {
+        if (!stripe.isEnabled() || sessionId == null || sessionId.isBlank()) {
+            return 0;
+        }
+        Stripe.apiKey = stripe.getSecretKey();
+        Session session;
+        try {
+            session = Session.retrieve(sessionId);
+        } catch (StripeException ex) {
+            log.warn("Não foi possível obter a sessão Stripe {}: {}", sessionId, ex.getMessage());
+            return 0;
+        }
+        if (!"paid".equals(session.getPaymentStatus())) {
+            log.info("Sessão {} ainda não paga (payment_status={}) — sem crédito", sessionId, session.getPaymentStatus());
+            return 0;
+        }
+        // Segurança: a sessão tem de pertencer ao utilizador autenticado.
+        java.util.Map<String, String> meta = session.getMetadata();
+        Long dono = parseLong(meta == null ? null : meta.get("utilizadorId"));
+        if (dono == null || !dono.equals(utilizadorId)) {
+            log.warn("Sessão {} não pertence ao utilizador {} (dono={}) — ignorada", sessionId, utilizadorId, dono);
+            return 0;
+        }
+        return creditar(session);
+    }
 
-            if ("active".equals(sub.getStatus()) || "trialing".equals(sub.getStatus())) {
-                String priceId = sub.getItems().getData().get(0).getPrice().getId();
-                String plano = stripe.planoDoPrice(priceId);
-                if (plano != null) {
-                    planoRepository.findByNome(plano).ifPresent(u::setPlano);
-                }
-            } else if ("canceled".equals(sub.getStatus())) {
-                planoRepository.findByNome(PLANO_GRATIS).ifPresent(u::setPlano);
-            }
-            utilizadorRepository.save(u);
-            log.info("Subscrição {} → estado {} (user {})", sub.getId(), sub.getStatus(), u.getId());
-        });
+    /**
+     * Credita os leads uma só vez (idempotente por stripe_session_id). Devolve os leads creditados
+     * nesta chamada (0 se já tinha sido processada ou sem metadata).
+     */
+    private int creditar(Session session) {
+        String sessionId = session.getId();
+        if (pagamentoRepository.existsByStripeSessionId(sessionId)) {
+            return 0;   // já processado (webhook + regresso, ou reentrega)
+        }
+        java.util.Map<String, String> meta = session.getMetadata();
+        Long utilizadorId = parseLong(meta == null ? null : meta.get("utilizadorId"));
+        if (utilizadorId == null) {
+            // Ex.: evento sintético (stripe trigger) sem a nossa metadata → ignora sem crashar.
+            log.warn("Checkout pago sem metadata utilizadorId (session={}) — ignorado", sessionId);
+            return 0;
+        }
+        int leads = parseInt(meta.getOrDefault("leads", "0"));
+
+        Pagamento p = new Pagamento();
+        p.setUtilizadorId(utilizadorId);
+        p.setStripeSessionId(sessionId);
+        p.setLeads(leads);
+        p.setValorCentavos(session.getAmountTotal() != null ? session.getAmountTotal().intValue() : null);
+        p.setMoeda(session.getCurrency());
+        p.setEstado("pago");
+        pagamentoRepository.save(p);          // UNIQUE(session_id) é o backstop contra corridas
+        creditosService.creditar(utilizadorId, leads);
+        log.info("Créditos aplicados: user={} +{} leads (session={})", utilizadorId, leads, sessionId);
+        return leads;
+    }
+
+    private static Long parseLong(String s) {
+        try {
+            return s == null || s.isBlank() ? null : Long.valueOf(s.trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private static int parseInt(String s) {
+        try {
+            return s == null || s.isBlank() ? 0 : Integer.parseInt(s.trim());
+        } catch (NumberFormatException ex) {
+            return 0;
+        }
     }
 }

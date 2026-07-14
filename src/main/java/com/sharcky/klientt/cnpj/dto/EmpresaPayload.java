@@ -19,6 +19,7 @@ public record EmpresaPayload(
         Double lng,
         CadastraisPayload cadastrais,
         List<String> telefones,
-        List<String> emails
+        List<String> emails,
+        List<SocioPayload> socios
 ) {
 }

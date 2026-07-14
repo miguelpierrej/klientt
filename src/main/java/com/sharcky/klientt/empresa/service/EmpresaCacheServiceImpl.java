@@ -2,6 +2,8 @@ package com.sharcky.klientt.empresa.service;
 
 import com.sharcky.klientt.empresa.model.Contato;
 import com.sharcky.klientt.empresa.model.Empresa;
+import com.sharcky.klientt.empresa.model.EmpresaRede;
+import com.sharcky.klientt.empresa.model.EmpresaSocio;
 import com.sharcky.klientt.empresa.repository.EmpresaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -82,9 +84,51 @@ public class EmpresaCacheServiceImpl implements EmpresaCacheService {
         alvo.setOptanteSimples(coalesce(fresca.getOptanteSimples(), alvo.getOptanteSimples()));
         alvo.setOptanteMei(coalesce(fresca.getOptanteMei(), alvo.getOptanteMei()));
 
+        // Sinais de presença digital (Maps, via enriquecimento)
+        alvo.setNota(coalesce(fresca.getNota(), alvo.getNota()));
+        alvo.setAvaliacoes(coalesce(fresca.getAvaliacoes(), alvo.getAvaliacoes()));
+
         alvo.setAtualizadoEm(LocalDateTime.now());
 
         fundirContatos(alvo, fresca);
+        fundirRedes(alvo, fresca);
+        fundirSocios(alvo, fresca);
+    }
+
+    /** União dos sócios da fresca nos do alvo, por 'nome' — sem duplicar. */
+    private void fundirSocios(Empresa alvo, Empresa fresca) {
+        Set<String> existentes = new HashSet<>();
+        for (EmpresaSocio s : alvo.getSocios()) {
+            existentes.add(s.getNome() == null ? "" : s.getNome().toLowerCase());
+        }
+        for (EmpresaSocio novo : new ArrayList<>(fresca.getSocios())) {
+            String chave = novo.getNome() == null ? "" : novo.getNome().toLowerCase();
+            if (existentes.add(chave)) {
+                EmpresaSocio copia = new EmpresaSocio();
+                copia.setNome(novo.getNome());
+                copia.setQualificacao(novo.getQualificacao());
+                copia.setFaixaEtaria(novo.getFaixaEtaria());
+                copia.setDesde(novo.getDesde());
+                alvo.adicionarSocio(copia);
+            }
+        }
+    }
+
+    /** União das redes da fresca nas do alvo, por 'rede' (uma por rede) — sem duplicar. */
+    private void fundirRedes(Empresa alvo, Empresa fresca) {
+        Set<String> existentes = new HashSet<>();
+        for (EmpresaRede r : alvo.getRedes()) {
+            existentes.add(r.getRede() == null ? "" : r.getRede().toLowerCase());
+        }
+        for (EmpresaRede nova : new ArrayList<>(fresca.getRedes())) {
+            String chave = nova.getRede() == null ? "" : nova.getRede().toLowerCase();
+            if (existentes.add(chave)) {
+                EmpresaRede copia = new EmpresaRede();
+                copia.setRede(nova.getRede());
+                copia.setUrl(nova.getUrl());
+                alvo.adicionarRede(copia);
+            }
+        }
     }
 
     /** União dos contatos da fresca nos do alvo, por (tipo, valor) — sem duplicar. */

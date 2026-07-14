@@ -6,14 +6,15 @@ import com.sharcky.klientt.cnae.Cnae;
 import com.sharcky.klientt.cnae.ResolvedorCnae;
 import com.sharcky.klientt.cnpj.FonteCnpj;
 import com.sharcky.klientt.cnpj.FonteContatoCnpj;
-import com.sharcky.klientt.cnpj.config.ClienteCnpjProperties;
 import com.sharcky.klientt.cnpj.config.ContatoFallbackProperties;
 import com.sharcky.klientt.cnpj.dto.EmpresaPayload;
 import com.sharcky.klientt.empresa.model.Contato;
 import com.sharcky.klientt.empresa.model.Empresa;
 import com.sharcky.klientt.empresa.service.EmpresaCacheService;
+import com.sharcky.klientt.enriquecimento.ScraperClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -36,51 +37,66 @@ public class FonteCnpjExecutor {
     private final FonteCnpj fonteCnpj;
     private final IngestaoService ingestaoService;
     private final JobService jobService;
-    private final ClienteCnpjProperties properties;
     private final FonteContatoCnpj fonteContato;
     private final ContatoFallbackProperties contatoFallback;
     private final EmpresaCacheService cacheService;
+    private final ScraperClient scraperClient;
+    /** Tamanho da 1ª página (= franquia grátis). A busca inicial traz exatamente uma página. */
+    private final int tamanhoPagina;
 
     public FonteCnpjExecutor(ResolvedorCnae resolvedorCnae, FonteCnpj fonteCnpj,
                              IngestaoService ingestaoService, JobService jobService,
-                             ClienteCnpjProperties properties, FonteContatoCnpj fonteContato,
-                             ContatoFallbackProperties contatoFallback, EmpresaCacheService cacheService) {
+                             FonteContatoCnpj fonteContato,
+                             ContatoFallbackProperties contatoFallback, EmpresaCacheService cacheService,
+                             ScraperClient scraperClient,
+                             @Value("${klientt.busca.tamanho-pagina:20}") int tamanhoPagina) {
         this.resolvedorCnae = resolvedorCnae;
         this.fonteCnpj = fonteCnpj;
         this.ingestaoService = ingestaoService;
         this.jobService = jobService;
-        this.properties = properties;
         this.fonteContato = fonteContato;
         this.contatoFallback = contatoFallback;
         this.cacheService = cacheService;
+        this.scraperClient = scraperClient;
+        this.tamanhoPagina = tamanhoPagina;
     }
 
     @Async
     public void executar(Long jobId, TipoBusca tipo, String termo, String regiao, String cnae) {
+        List<EmpresaPayload> empresas;
         try {
-            List<EmpresaPayload> empresas = descobrir(tipo, termo, regiao, cnae, properties.getLimiteDefault());
+            // 1ª página = uma página (tamanho-pagina), que é a franquia grátis. "Carregar mais"
+            // (BuscaServiceImpl) é que traz lotes de limite-default e consome créditos.
+            FonteCnpj.Pagina pagina = descobrir(tipo, termo, regiao, cnae, tamanhoPagina);
+            empresas = pagina.empresas();
             ingestaoService.ingerir(empresas, jobId);
             complementarContatos(empresas);
+            jobService.registarCursor(jobId, pagina.cursor());   // cursor p/ "carregar mais"
         } catch (Exception ex) {
             log.warn("Falha na descoberta CNPJ jobId={} (tipo={}, termo='{}'): {}", jobId, tipo, termo, ex.getMessage());
-        } finally {
+            jobService.concluir(jobId);
+            return;
+        }
+        // Enriquecimento por scraper (Novo Fluxo): se despachado, o callback conclui o job;
+        // se está desligado/indisponível, conclui-se já na descoberta (comportamento só-API).
+        if (!scraperClient.enriquecer(jobId, empresas)) {
             jobService.concluir(jobId);
         }
     }
 
-    private List<EmpresaPayload> descobrir(TipoBusca tipo, String termo, String regiao, String cnae, int limite) {
+    private FonteCnpj.Pagina descobrir(TipoBusca tipo, String termo, String regiao, String cnae, int limite) {
         if (tipo == TipoBusca.NOME) {
-            return fonteCnpj.buscarPorNome(termo, regiao, limite);
+            return new FonteCnpj.Pagina(fonteCnpj.buscarPorNome(termo, regiao, limite), null);
         }
-        // NICHO: usa o CNAE confirmado pelo utilizador; sem ele, resolve o termo (fallback).
+        // NICHO: usa o CNAE confirmado pelo utilizador (com cursor p/ carregar mais); sem ele, resolve.
         if (cnae != null && !cnae.isBlank()) {
-            return fonteCnpj.buscarPorCnae(cnae, regiao, limite);
+            return fonteCnpj.buscarPaginaPorCnae(cnae, regiao, null, limite);
         }
         List<EmpresaPayload> todas = new ArrayList<>();
         for (Cnae c : resolvedorCnae.resolver(termo)) {
             todas.addAll(fonteCnpj.buscarPorCnae(c.codigo(), regiao, limite));
         }
-        return todas;
+        return new FonteCnpj.Pagina(todas, null);
     }
 
     /**

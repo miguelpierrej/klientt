@@ -12,6 +12,7 @@ public record LeadResponse(
         String telefone,
         String email,
         String porte,
-        boolean contactavel
+        boolean contactavel,
+        Double nota
 ) {
 }

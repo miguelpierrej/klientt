@@ -1,6 +1,6 @@
 package com.sharcky.klientt.pagamento.service;
 
-/** Pagamentos não configurados/indisponíveis, ou plano sem preço Stripe. */
+/** Stripe não configurado / pagamento indisponível. */
 public class PagamentoIndisponivelException extends RuntimeException {
 
     public PagamentoIndisponivelException(String mensagem) {

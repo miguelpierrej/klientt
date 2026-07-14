@@ -1,6 +1,8 @@
 package com.sharcky.klientt.busca.web;
 
 import com.sharcky.klientt.busca.dto.BuscaRequest;
+import com.sharcky.klientt.busca.dto.LeadResponse;
+import com.sharcky.klientt.busca.dto.PaginaLeads;
 import com.sharcky.klientt.busca.dto.TipoBusca;
 import com.sharcky.klientt.busca.service.BuscaService;
 import com.sharcky.klientt.cnae.Cnae;
@@ -28,10 +30,11 @@ class BuscaControllerTest {
 
     @Mock BuscaService buscaService;
     @Mock ResolvedorCnae resolvedorCnae;
+    @Mock com.sharcky.klientt.conta.service.CreditosService creditosService;
     @Mock KlienttUserDetails utilizador;
 
     BuscaController controller() {
-        return new BuscaController(buscaService, resolvedorCnae);
+        return new BuscaController(buscaService, resolvedorCnae, creditosService, 20);
     }
 
     @Test
@@ -87,6 +90,27 @@ class BuscaControllerTest {
 
         assertThat(view).isEqualTo("fragments/resultados :: aguardar");
         verify(resolvedorCnae, never()).candidatos(any());
+    }
+
+    @Test
+    void filtrarPaginaDoisDevolveAFatiaEEstadoDoFiltro() {
+        when(utilizador.getId()).thenReturn(1L);
+        List<LeadResponse> vinteCinco = java.util.stream.IntStream.rangeClosed(1, 25)
+                .mapToObj(i -> new LeadResponse((long) i, "E" + i, "SP", null, null, null, null, true, null))
+                .toList();
+        when(buscaService.filtrar(eq(7L), eq(1L), any())).thenReturn(vinteCinco);
+        Model model = new ConcurrentModel();
+
+        String view = controller().filtrar(7L, null, true, 2, utilizador, model);
+
+        assertThat(view).isEqualTo("fragments/resultados :: leads");
+        PaginaLeads pagina = (PaginaLeads) model.getAttribute("pagina");
+        assertThat(pagina).isNotNull();
+        assertThat(pagina.pagina()).isEqualTo(2);
+        assertThat(pagina.totalPaginas()).isEqualTo(2);
+        assertThat(pagina.leads()).hasSize(5);
+        assertThat(model.getAttribute("jobId")).isEqualTo(7L);
+        assertThat(model.getAttribute("comContato")).isEqualTo(true);
     }
 
     private BindingResult binding(BuscaRequest req) {

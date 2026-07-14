@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * Configuração da resolução nicho→CNAE via LLM (PLANO-DUAL-FONTE.md, Fase D).
+ * Configuração da resolução nicho→CNAE via LLM (Gemini).
  * Por default desligada: sem chave, a app arranca e a resolução fica limitada à
  * tabela determinística (sem fallback de LLM).
  */
@@ -19,9 +19,12 @@ public class CnaeProperties {
     /** Liga o fallback por LLM (requer api-key). */
     private boolean enabled = false;
 
-    /** Chave da API Anthropic (ANTHROPIC_API_KEY). */
+    /** Chave da API Gemini (GEMINI_API_KEY). */
     private String apiKey = "";
 
-    /** Modelo Claude a usar (default Opus 4.8; haiku para custo mais baixo). */
-    private String model = "claude-opus-4-8";
+    /** Modelo Gemini a usar (flash = baixo custo/latência). */
+    private String model = "gemini-2.5-flash";
+
+    /** URL base da Generative Language API (troca só para proxy/testes). */
+    private String baseUrl = "https://generativelanguage.googleapis.com";
 }

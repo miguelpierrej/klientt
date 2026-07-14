@@ -31,7 +31,6 @@
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
 		<stripe.version>29.2.0</stripe.version>
-		<anthropic.version>2.34.0</anthropic.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -100,18 +99,11 @@
 			<version>${mapstruct.version}</version>
 		</dependency>
 
-		<!-- Stripe (pagamentos) -->
+		<!-- Stripe (pagamento único de créditos de leads) -->
 		<dependency>
 			<groupId>com.stripe</groupId>
 			<artifactId>stripe-java</artifactId>
 			<version>${stripe.version}</version>
-		</dependency>
-
-		<!-- Anthropic (Claude) — fallback nicho->CNAE (PLANO-DUAL-FONTE.md, Fase D) -->
-		<dependency>
-			<groupId>com.anthropic</groupId>
-			<artifactId>anthropic-java</artifactId>
-			<version>${anthropic.version}</version>
 		</dependency>
 
 		<dependency>

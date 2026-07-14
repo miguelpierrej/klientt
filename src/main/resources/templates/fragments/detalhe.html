@@ -46,6 +46,26 @@
             </ul>
         </section>
 
+        <!-- Presença digital (enriquecimento): nota do Google + redes sociais -->
+        <section class="modal-seccao" th:if="${lead.nota() != null or !#lists.isEmpty(lead.redes())}">
+            <h3>Presença digital</h3>
+            <dl th:if="${lead.nota() != null}">
+                <dt>Google</dt>
+                <dd>
+                    <span class="tag ok"><svg th:replace="~{fragments/icones :: estrela}"></svg>
+                        <span th:text="${#numbers.formatDecimal(lead.nota(), 1, 1)}">4.5</span></span>
+                    <span class="ajuda" th:if="${lead.avaliacoes()}"
+                          th:text="${lead.avaliacoes()} + ' avaliações'">avaliações</span>
+                </dd>
+            </dl>
+            <ul class="modal-contatos" th:unless="${#lists.isEmpty(lead.redes())}">
+                <li th:each="r : ${lead.redes()}">
+                    <span class="rede-nome" th:text="${r.rede()}">rede</span>
+                    <a th:href="${r.url()}" target="_blank" rel="noopener" th:text="${r.url()}">url</a>
+                </li>
+            </ul>
+        </section>
+
         <!-- Dados cadastrais (CNPJ/Receita) — só quando há dados consultados -->
         <section class="modal-seccao" th:if="${lead.razaoSocial() != null}">
             <h3>Dados cadastrais (CNPJ)</h3>
@@ -65,11 +85,23 @@
                 <dd th:text="${lead.capitalSocial() != null} ? 'R$ ' + ${#numbers.formatDecimal(lead.capitalSocial(), 1, 'POINT', 2, 'COMMA')} : '—'">—</dd>
                 <dt>Simples / MEI</dt>
                 <dd>
-                    <span th:if="${lead.optanteSimples()}" class="tag ok">Simples</span>
-                    <span th:if="${lead.optanteMei()}" class="tag ok">MEI</span>
-                    <span th:unless="${lead.optanteSimples() or lead.optanteMei()}">—</span>
+                    <span th:if="${lead.optanteSimples() == true}" class="tag ok">Simples</span>
+                    <span th:if="${lead.optanteMei() == true}" class="tag ok">MEI</span>
+                    <span th:unless="${lead.optanteSimples() == true or lead.optanteMei() == true}">—</span>
                 </dd>
             </dl>
+        </section>
+
+        <!-- Sócios (QSA / Receita) -->
+        <section class="modal-seccao" th:unless="${#lists.isEmpty(lead.socios())}">
+            <h3>Sócios</h3>
+            <ul class="modal-contatos">
+                <li th:each="s : ${lead.socios()}">
+                    <span th:text="${s.nome()}">nome</span>
+                    <span class="ajuda" th:if="${s.qualificacao()}" th:text="'· ' + ${s.qualificacao()}">qualificação</span>
+                    <span class="ajuda" th:if="${s.faixaEtaria()}" th:text="'· ' + ${s.faixaEtaria()}">faixa</span>
+                </li>
+            </ul>
         </section>
 
         <footer class="modal-rodape">

@@ -18,4 +18,11 @@ public interface JobResultadoRepository extends JpaRepository<JobResultado, JobR
             """)
     long contarLeadsDoUtilizadorDesde(@Param("utilizadorId") Long utilizadorId,
                                       @Param("desde") LocalDateTime desde);
+
+    /** Nº de leads por cada job do utilizador — base do consumo de créditos (1ª página é grátis). */
+    @Query("""
+            select count(jr) from JobResultado jr, JobBusca j
+            where jr.jobId = j.id and j.utilizadorId = :utilizadorId group by j.id
+            """)
+    List<Long> contarLeadsPorJobDoUtilizador(@Param("utilizadorId") Long utilizadorId);
 }

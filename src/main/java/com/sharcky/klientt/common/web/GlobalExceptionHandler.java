@@ -1,7 +1,6 @@
 package com.sharcky.klientt.common.web;
 
 import com.sharcky.klientt.busca.service.BuscaNaoEncontradaException;
-import com.sharcky.klientt.conta.service.QuotaExcedidaException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -20,13 +19,6 @@ import java.util.List;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-
-    /** Limite do plano atingido — mensagem clara para o utilizador (não é erro de sistema). */
-    @ExceptionHandler(QuotaExcedidaException.class)
-    public String tratarQuotaExcedida(QuotaExcedidaException ex, Model model) {
-        model.addAttribute("mensagens", List.of(ex.getMessage()));
-        return "fragments/resultados :: erro";
-    }
 
     /** Job inexistente ou de outro utilizador — mensagem neutra (não revela existência). */
     @ExceptionHandler(BuscaNaoEncontradaException.class)

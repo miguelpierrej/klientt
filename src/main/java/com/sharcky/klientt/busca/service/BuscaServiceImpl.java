@@ -13,7 +13,9 @@ import com.sharcky.klientt.busca.job.JobResultadoRepository;
 import com.sharcky.klientt.busca.job.JobService;
 import com.sharcky.klientt.busca.mapper.LeadDetalheMapper;
 import com.sharcky.klientt.busca.mapper.LeadMapper;
-import com.sharcky.klientt.conta.service.QuotaService;
+import com.sharcky.klientt.cnpj.FonteCnpj;
+import com.sharcky.klientt.cnpj.config.ClienteCnpjProperties;
+import com.sharcky.klientt.conta.service.CreditosService;
 import com.sharcky.klientt.empresa.model.Empresa;
 import com.sharcky.klientt.empresa.repository.EmpresaRepository;
 import org.springframework.stereotype.Service;
@@ -31,30 +33,38 @@ import java.util.List;
 public class BuscaServiceImpl implements BuscaService {
 
     private final JobService jobService;
-    private final QuotaService quotaService;
+    private final CreditosService creditosService;
     private final FonteCnpjExecutor fonteCnpjExecutor;
     private final JobResultadoRepository jobResultadoRepository;
     private final EmpresaRepository empresaRepository;
     private final LeadMapper leadMapper;
     private final LeadDetalheMapper detalheMapper;
+    private final FonteCnpj fonteCnpj;
+    private final IngestaoService ingestaoService;
+    private final ClienteCnpjProperties cnpjProperties;
 
-    public BuscaServiceImpl(JobService jobService, QuotaService quotaService,
+    public BuscaServiceImpl(JobService jobService, CreditosService creditosService,
                             FonteCnpjExecutor fonteCnpjExecutor,
                             JobResultadoRepository jobResultadoRepository,
                             EmpresaRepository empresaRepository,
-                            LeadMapper leadMapper, LeadDetalheMapper detalheMapper) {
+                            LeadMapper leadMapper, LeadDetalheMapper detalheMapper,
+                            FonteCnpj fonteCnpj, IngestaoService ingestaoService,
+                            ClienteCnpjProperties cnpjProperties) {
         this.jobService = jobService;
-        this.quotaService = quotaService;
+        this.creditosService = creditosService;
         this.fonteCnpjExecutor = fonteCnpjExecutor;
         this.jobResultadoRepository = jobResultadoRepository;
         this.empresaRepository = empresaRepository;
         this.leadMapper = leadMapper;
         this.detalheMapper = detalheMapper;
+        this.fonteCnpj = fonteCnpj;
+        this.ingestaoService = ingestaoService;
+        this.cnpjProperties = cnpjProperties;
     }
 
     @Override
     public Long iniciar(BuscaRequest request, Long utilizadorId) {
-        quotaService.garantirDisponibilidade(utilizadorId);
+        // A 1ª página é grátis — a busca não exige créditos (o gate está no "carregar mais").
         // criar() é transacional e faz commit antes de dispararmos a descoberta — assim o trabalho
         // assíncrono encontra sempre o job já persistido.
         Long jobId = jobService.criar(request, utilizadorId);
@@ -93,6 +103,32 @@ public class BuscaServiceImpl implements BuscaService {
         return aplicar(jobId, utilizadorId, filtro).stream()
                 .map(detalheMapper::toDetalhe)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public void carregarMais(Long jobId, Long utilizadorId) {
+        JobBusca job = jobDoUtilizador(jobId, utilizadorId);
+        if (job.getCursor() == null || job.getCursor().isBlank()) {
+            return;   // esgotado na fonte
+        }
+        long saldo = creditosService.disponivel(utilizadorId);
+        if (saldo <= 0) {
+            return;   // sem créditos → o controlador oferece a compra
+        }
+        // Só NICHO com CNAE confirmado tem cursor. Não busca mais do que o saldo permite.
+        int aBuscar = (int) Math.min(cnpjProperties.getLimiteDefault(), saldo);
+        FonteCnpj.Pagina pagina = fonteCnpj.buscarPaginaPorCnae(
+                job.getCnae(), job.getRegiao(), job.getCursor(), aBuscar);
+        ingestaoService.ingerir(pagina.empresas(), jobId);
+        jobService.registarCursor(jobId, pagina.cursor());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean temMais(Long jobId, Long utilizadorId) {
+        JobBusca job = jobDoUtilizador(jobId, utilizadorId);
+        return job.getCursor() != null && !job.getCursor().isBlank();
     }
 
     /** Aplica o filtro e a ordenação aos leads de um job concluído (do utilizador). */

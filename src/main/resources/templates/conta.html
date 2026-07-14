@@ -15,8 +15,7 @@
             <p class="tagline">A minha conta</p>
         </div>
         <div class="utilizador">
-            <a class="btn-link" th:href="@{/}">Buscar</a>
-            <a class="btn-link" th:href="@{/planos}">Planos</a>
+            <a class="btn-link" th:href="@{/app}">Buscar</a>
             <form method="post" th:action="@{/logout}">
                 <button type="submit" class="btn-link">Sair</button>
             </form>
@@ -30,24 +29,21 @@
     <div class="cartao-conta">
         <p><span class="rotulo">Nome</span> <strong th:text="${conta.nome()}">Nome</strong></p>
         <p><span class="rotulo">Email</span> <strong th:text="${conta.email()}">email</strong></p>
-        <p><span class="rotulo">Plano</span> <strong th:text="${conta.planoNome()}">Plano</strong></p>
     </div>
 
     <div class="cartao-conta">
-        <h3>Consumo do mês</h3>
+        <h3>Créditos de leads</h3>
         <p class="consumo-numeros">
-            <strong th:text="${conta.consumoMes()}">0</strong>
-            de <span th:text="${conta.limiteLeadsMes()}">0</span> leads
-            (<span th:text="${conta.restante()}">0</span> restantes)
+            <strong th:text="${conta.disponivel()}">0</strong> leads disponíveis
+            <span class="ajuda">(de <span th:text="${conta.comprado()}">0</span> comprados)</span>
         </p>
-        <div class="barra-quota">
+        <div class="barra-quota" th:if="${conta.comprado() > 0}">
             <div class="barra-quota-preenchida"
                  th:classappend="${conta.percentagemUsada() >= 100} ? ' cheia'"
                  th:style="'width:' + ${conta.percentagemUsada()} + '%'"></div>
         </div>
-        <p class="ajuda" th:if="${conta.percentagemUsada() >= 100}">
-            Limite atingido. Faça upgrade do plano para continuar a buscar.
-        </p>
+        <p class="ajuda">A 1ª página de cada busca é grátis. Para ver mais empresas, usa créditos.</p>
+        <a class="btn" th:href="@{/creditos}">Comprar leads</a>
     </div>
 </main>
 </body>
