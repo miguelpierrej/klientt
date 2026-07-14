@@ -51,6 +51,58 @@ class RegistoServiceImplTest {
         assertThat(guardado.getPasswordHash()).isEqualTo("HASH");
         assertThat(guardado.getPlano()).isSameAs(teste);
         assertThat(guardado.getNome()).isEqualTo("Ana");
+        // Nasce por confirmar, com token válido.
+        assertThat(guardado.isEmailVerificado()).isFalse();
+        assertThat(guardado.getTokenVerificacao()).isNotBlank();
+        assertThat(guardado.tokenValido(java.time.LocalDateTime.now())).isTrue();
+    }
+
+    @Test
+    void confirmarComTokenValidoAtivaEEsvaziaToken() {
+        Utilizador u = new Utilizador();
+        u.setEmailVerificado(false);
+        u.setTokenVerificacao("tok123");
+        u.setTokenVerificacaoExpiraEm(java.time.LocalDateTime.now().plusHours(1));
+        when(utilizadorRepository.findByTokenVerificacao("tok123")).thenReturn(Optional.of(u));
+
+        boolean ok = registoService.confirmar("tok123");
+
+        assertThat(ok).isTrue();
+        assertThat(u.isEmailVerificado()).isTrue();
+        assertThat(u.getTokenVerificacao()).isNull();
+        assertThat(u.getTokenVerificacaoExpiraEm()).isNull();
+    }
+
+    @Test
+    void confirmarComTokenExpiradoNaoAtiva() {
+        Utilizador u = new Utilizador();
+        u.setEmailVerificado(false);
+        u.setTokenVerificacao("tokExp");
+        u.setTokenVerificacaoExpiraEm(java.time.LocalDateTime.now().minusMinutes(1));
+        when(utilizadorRepository.findByTokenVerificacao("tokExp")).thenReturn(Optional.of(u));
+
+        assertThat(registoService.confirmar("tokExp")).isFalse();
+        assertThat(u.isEmailVerificado()).isFalse();
+    }
+
+    @Test
+    void confirmarTokenInexistenteDevolveFalse() {
+        when(utilizadorRepository.findByTokenVerificacao("nada")).thenReturn(Optional.empty());
+        assertThat(registoService.confirmar("nada")).isFalse();
+    }
+
+    @Test
+    void prepararReenvioSoParaContaPorConfirmar() {
+        Utilizador verificado = new Utilizador();
+        verificado.setEmailVerificado(true);
+        when(utilizadorRepository.findByEmail("v@x.com")).thenReturn(Optional.of(verificado));
+        assertThat(registoService.prepararReenvio("v@x.com")).isEmpty();
+
+        Utilizador porConfirmar = new Utilizador();
+        porConfirmar.setEmailVerificado(false);
+        when(utilizadorRepository.findByEmail("p@x.com")).thenReturn(Optional.of(porConfirmar));
+        assertThat(registoService.prepararReenvio("p@x.com")).isPresent();
+        assertThat(porConfirmar.getTokenVerificacao()).isNotBlank();
     }
 
     @Test

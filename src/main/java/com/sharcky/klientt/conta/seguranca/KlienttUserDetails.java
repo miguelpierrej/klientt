@@ -18,12 +18,14 @@ public class KlienttUserDetails implements UserDetails {
     private final String email;
     private final String passwordHash;
     private final String nome;
+    private final boolean emailVerificado;
 
     public KlienttUserDetails(Utilizador utilizador) {
         this.id = utilizador.getId();
         this.email = utilizador.getEmail();
         this.passwordHash = utilizador.getPasswordHash();
         this.nome = utilizador.getNome();
+        this.emailVerificado = utilizador.isEmailVerificado();
     }
 
     public Long getId() {
@@ -66,6 +68,7 @@ public class KlienttUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        // Email por confirmar → login recusado (DisabledException). Ver VerificacaoFailureHandler.
+        return emailVerificado;
     }
 }

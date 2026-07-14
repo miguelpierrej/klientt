@@ -18,12 +18,14 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(auth -> auth
                         // Páginas públicas + callback do scraper (autenticado pelo token X-Klientt-Token).
-                        .requestMatchers("/", "/login", "/registo", "/css/**", "/favicon.svg",
+                        .requestMatchers("/", "/login", "/registo", "/verificar-email",
+                                "/verificar-email/reenviar", "/verifica-email", "/css/**", "/favicon.svg",
                                 "/api/scraper/**", "/api/stripe/**").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form
                         .loginPage("/login")
                         .defaultSuccessUrl("/app", true)
+                        .failureHandler(new VerificacaoFailureHandler())
                         .permitAll())
                 .logout(logout -> logout
                         .logoutSuccessUrl("/login?logout")

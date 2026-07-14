@@ -18,9 +18,23 @@
     <h2>Entrar</h2>
 
     <p class="aviso ok" th:if="${param.registado}">Conta criada! Já pode entrar.</p>
+    <p class="aviso ok" th:if="${param.verificado}">Email confirmado! Já pode entrar.</p>
     <p class="aviso ok" th:if="${param.logout}">Sessão terminada.</p>
     <p class="aviso erro" th:if="${param.expirou}">A sua sessão expirou. Entre novamente.</p>
     <p class="aviso erro" th:if="${param.error}">Email ou password inválidos.</p>
+    <p class="aviso erro" th:if="${param.tokenInvalido}">Link de confirmação inválido ou expirado. Reenvie o email abaixo.</p>
+
+    <div class="aviso erro" th:if="${param.naoVerificado}">
+        Confirme o seu email antes de entrar.
+        <form method="post" th:action="@{/verificar-email/reenviar}" style="margin-top:.5rem">
+            <input type="hidden" name="email" th:value="${param.email}">
+            <div class="campo" th:unless="${param.email}">
+                <label for="email-reenvio">Email</label>
+                <input type="email" id="email-reenvio" name="email" required>
+            </div>
+            <button type="submit" class="btn-link">Reenviar email de confirmação</button>
+        </form>
+    </div>
 
     <form method="post" th:action="@{/login}" class="form-conta">
         <div class="campo">

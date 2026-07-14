@@ -36,6 +36,25 @@ public class Utilizador {
     @Column(name = "creditos_leads", nullable = false)
     private int creditosLeads = 0;
 
+    /** Email confirmado por link (dois passos)? Enquanto false, o login é recusado. */
+    @Column(name = "email_verificado", nullable = false)
+    private boolean emailVerificado = false;
+
+    /** Token de uso único do email de confirmação (null depois de confirmado). */
+    @Column(name = "token_verificacao", length = 100)
+    private String tokenVerificacao;
+
+    /** Validade do token de confirmação. */
+    @Column(name = "token_verificacao_expira_em")
+    private LocalDateTime tokenVerificacaoExpiraEm;
+
     @Column(name = "criado_em", nullable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();
+
+    /** Token válido e ainda dentro do prazo? */
+    public boolean tokenValido(LocalDateTime agora) {
+        return tokenVerificacao != null
+                && tokenVerificacaoExpiraEm != null
+                && tokenVerificacaoExpiraEm.isAfter(agora);
+    }
 }

@@ -42,6 +42,7 @@ public class DevContaSeeder implements ApplicationRunner {
         u.setNome("Dev");
         u.setEmail(DEV_EMAIL);
         u.setPasswordHash(passwordEncoder.encode("dev12345"));
+        u.setEmailVerificado(true);   // dev entra sem passar pela confirmação de email
         // Créditos generosos em dev para poder testar o "carregar mais" sem pagar.
         u.setCreditosLeads(9000);
         planoRepository.findByNome("Agency").or(() -> planoRepository.findByNome("Teste")).ifPresent(u::setPlano);
