@@ -26,4 +26,7 @@ public interface RegistoService {
      * Confirma o email a partir do token (uso único, com validade). Devolve true se confirmou.
      */
     boolean confirmar(String token);
+
+    /** O email já foi confirmado? Usado pelo polling da página de aguardo. */
+    boolean emailConfirmado(String email);
 }

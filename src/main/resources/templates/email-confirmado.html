@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klientt — e-mail confirmado</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="topo">
+    <div class="container">
+        <h1 class="logo">Klientt</h1>
+    </div>
+</header>
+
+<main class="container conta">
+    <div class="cartao-conta" th:if="${ok}">
+        <h2><svg th:replace="~{fragments/icones :: sucesso}"></svg> E-mail confirmado!</h2>
+        <p>Sua conta está ativa. Pode <strong>fechar esta aba</strong> e voltar para a página anterior —
+            ela vai continuar automaticamente.</p>
+        <p class="ajuda">Se veio de outro dispositivo, é só entrar:</p>
+        <p><a class="btn" th:href="@{/login(verificado=true)}">Entrar</a></p>
+    </div>
+
+    <div class="cartao-conta" th:unless="${ok}">
+        <h2><svg th:replace="~{fragments/icones :: alerta}"></svg> Link inválido ou expirado</h2>
+        <p>Este link de confirmação não é válido ou já expirou (validade de 24 horas).</p>
+        <p>Volte ao login e reenvie o e-mail de confirmação.</p>
+        <p><a class="btn" th:href="@{/login}">Ir para o login</a></p>
+    </div>
+</main>
+</body>
+</html>

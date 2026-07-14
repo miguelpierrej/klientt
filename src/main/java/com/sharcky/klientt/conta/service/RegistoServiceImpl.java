@@ -77,6 +77,17 @@ public class RegistoServiceImpl implements RegistoService {
                 .orElse(false);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean emailConfirmado(String email) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+        return utilizadorRepository.findByEmail(email.trim().toLowerCase())
+                .map(Utilizador::isEmailVerificado)
+                .orElse(false);
+    }
+
     private void atribuirNovoToken(Utilizador u) {
         u.setTokenVerificacao(UUID.randomUUID().toString().replace("-", ""));
         u.setTokenVerificacaoExpiraEm(LocalDateTime.now().plusHours(HORAS_VALIDADE_TOKEN));

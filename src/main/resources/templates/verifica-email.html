@@ -21,10 +21,11 @@
         <p>
             Enviamos um link de confirmação para
             <strong th:if="${email}" th:text="${email}">seu e-mail</strong><span th:unless="${email}">seu e-mail</span>.
-            Clique no link para ativar sua conta e poder entrar.
+            Clique no botão do e-mail para ativar sua conta.
         </p>
-        <p class="ajuda">Não recebeu? Verifique o spam ou reenvie abaixo (o link é válido por 24 horas).</p>
+        <p class="ajuda" id="estado-aguardo">Aguardando confirmação… esta página avança sozinha assim que você confirmar.</p>
 
+        <p class="ajuda">Não recebeu? Verifique o spam ou reenvie abaixo (o link é válido por 24 horas).</p>
         <form method="post" th:action="@{/verificar-email/reenviar}" class="form-conta">
             <input type="hidden" name="email" th:value="${email}">
             <div class="campo" th:unless="${email}">
@@ -37,5 +38,24 @@
         <p class="ligacao"><a th:href="@{/login}">Voltar ao login</a></p>
     </div>
 </main>
+
+<!-- Polling: pergunta ao servidor se o email da sessão já foi confirmado; quando sim, avança. -->
+<script th:inline="none">
+    (function () {
+        var intervalo = setInterval(function () {
+            fetch('/verifica-email/status', {headers: {'Accept': 'application/json'}, credentials: 'same-origin'})
+                .then(function (r) { return r.ok ? r.json() : {}; })
+                .then(function (d) {
+                    if (d && d.verificado) {
+                        clearInterval(intervalo);
+                        var estado = document.getElementById('estado-aguardo');
+                        if (estado) { estado.textContent = 'Confirmado! Entrando…'; }
+                        window.location.href = '/login?verificado';
+                    }
+                })
+                .catch(function () { /* ignora falhas transitórias de rede */ });
+        }, 3000);
+    })();
+</script>
 </body>
 </html>

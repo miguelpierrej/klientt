@@ -5,6 +5,7 @@ import com.sharcky.klientt.conta.email.EmailService;
 import com.sharcky.klientt.conta.model.Utilizador;
 import com.sharcky.klientt.conta.service.EmailJaRegistadoException;
 import com.sharcky.klientt.conta.service.RegistoService;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -14,8 +15,6 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import java.nio.charset.StandardCharsets;
 
 @Controller
 public class RegistoController {
@@ -38,7 +37,7 @@ public class RegistoController {
 
     @PostMapping("/registo")
     public String registar(@Valid @ModelAttribute RegistoRequest registoRequest,
-                           BindingResult binding) {
+                           BindingResult binding, HttpSession session) {
         if (binding.hasErrors()) {
             return "registo";
         }
@@ -50,7 +49,9 @@ public class RegistoController {
             return "registo";
         }
         emailService.enviarVerificacao(u.getEmail(), u.getNome(), linkVerificacao(u.getTokenVerificacao()));
-        return "redirect:/verifica-email?email=" + java.net.URLEncoder.encode(u.getEmail(), StandardCharsets.UTF_8);
+        // A página de aguardo faz polling ao /verifica-email/status usando este email da sessão.
+        session.setAttribute(VerificacaoEmailController.SESSION_EMAIL_PENDENTE, u.getEmail());
+        return "redirect:/verifica-email";
     }
 
     /** Monta o link absoluto de confirmação a partir do pedido atual (dev: localhost; prod: domínio real). */

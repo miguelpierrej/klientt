@@ -92,6 +92,18 @@ class RegistoServiceImplTest {
     }
 
     @Test
+    void emailConfirmadoRefleteEstadoDaConta() {
+        Utilizador verificado = new Utilizador();
+        verificado.setEmailVerificado(true);
+        when(utilizadorRepository.findByEmail("ok@x.com")).thenReturn(Optional.of(verificado));
+        assertThat(registoService.emailConfirmado("  OK@x.com ")).isTrue();   // normaliza o email
+
+        when(utilizadorRepository.findByEmail("nao@x.com")).thenReturn(Optional.empty());
+        assertThat(registoService.emailConfirmado("nao@x.com")).isFalse();
+        assertThat(registoService.emailConfirmado(null)).isFalse();
+    }
+
+    @Test
     void prepararReenvioSoParaContaPorConfirmar() {
         Utilizador verificado = new Utilizador();
         verificado.setEmailVerificado(true);

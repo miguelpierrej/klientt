@@ -28,7 +28,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Páginas públicas + callback do scraper (autenticado pelo token X-Klientt-Token).
                         .requestMatchers("/", "/login", "/registo", "/verificar-email",
-                                "/verificar-email/reenviar", "/verifica-email",
+                                "/verificar-email/reenviar", "/verifica-email", "/verifica-email/status",
                                 "/recuperar-senha", "/redefinir-senha", "/css/**", "/favicon.svg",
                                 "/api/scraper/**", "/api/stripe/**").permitAll()
                         .anyRequest().authenticated())
