@@ -58,6 +58,20 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void robotsTxtEPublico() throws Exception {
+        mvc.perform(get("/robots.txt"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Sitemap:")));
+    }
+
+    @Test
+    void sitemapEPublico() throws Exception {
+        mvc.perform(get("/sitemap.xml"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("<urlset")));
+    }
+
+    @Test
     void rotaInexistenteRetorna404() throws Exception {
         mvc.perform(get("/rota-inexistente").with(user("teste")))
                 .andExpect(status().isNotFound());

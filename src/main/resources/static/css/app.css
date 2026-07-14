@@ -78,6 +78,58 @@ body {
     z-index: 1000;
     overflow-y: auto;
 }
+
+/* Feedback de carregamento do detalhe: aparece na hora do clique (via hx-indicator). */
+.modal-carregando {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, .45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal-carregando.htmx-request {
+    display: flex;
+}
+.spinner-modal {
+    width: 42px;
+    height: 42px;
+    border: 4px solid #bfdbfe;
+    border-top-color: var(--azul);
+    border-radius: 50%;
+    animation: girar .7s linear infinite;
+}
+
+/* Modal de confirmação de atividade (CNAE) */
+.cnae-modal { max-width: 480px; }
+.cnae-intro { margin: 0 0 18px; color: #334155; font-size: .95rem; line-height: 1.55; }
+.cnae-opcoes { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+.cnae-opcoes label {
+    display: flex; align-items: flex-start; gap: 10px;
+    border: 1px solid var(--borda); border-radius: 10px; padding: 12px 14px;
+    cursor: pointer; transition: border-color .15s, background .15s;
+}
+.cnae-opcoes label:hover { border-color: #bfdbfe; background: #f8fafc; }
+.cnae-opcoes label:has(input:checked) { border-color: var(--azul); background: #eff6ff; }
+.cnae-opcoes input[type="radio"] { margin-top: 3px; accent-color: var(--azul); flex: none; }
+.cnae-texto { display: flex; flex-direction: column; }
+.cnae-desc { font-weight: 600; color: #0f172a; }
+.cnae-cod { color: var(--cinza); font-size: .8rem; }
+.cnae-manual { display: block; margin: 6px 0 20px; }
+.cnae-manual-titulo { display: block; font-size: .9rem; font-weight: 600; margin-bottom: 6px; }
+.cnae-manual input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--borda); border-radius: 8px;
+    font-size: 1rem; box-sizing: border-box;
+}
+.cnae-manual .ajuda { display: block; margin-top: 4px; }
+.cnae-acoes { display: flex; gap: 10px; justify-content: flex-end; }
+.btn-secundario {
+    background: #fff; color: var(--cinza); border: 1px solid var(--borda);
+    padding: 11px 20px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.btn-secundario:hover { background: #f1f5f9; color: #0f172a; }
 .modal {
     background: #fff;
     border-radius: 14px;

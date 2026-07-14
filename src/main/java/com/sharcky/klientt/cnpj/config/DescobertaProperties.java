@@ -19,7 +19,19 @@ public class DescobertaProperties {
     /** {@code minhareceita} | {@code casadosdados}. */
     private String fonte = "minhareceita";
 
+    /**
+     * Fallback: quando a Minha Receita (grátis) <b>falha</b> (fora do ar/erro HTTP) — e NÃO quando
+     * simplesmente não tem resultados — tenta a Casa dos Dados (paga). Só na página inicial.
+     * Desliga com {@code false}.
+     */
+    private boolean fallbackCasadosdados = true;
+
     public boolean usaCasaDosDados() {
         return "casadosdados".equalsIgnoreCase(fonte);
+    }
+
+    /** Fallback ativo só faz sentido quando a fonte primária NÃO é já a Casa dos Dados. */
+    public boolean fallbackAtivo() {
+        return fallbackCasadosdados && !usaCasaDosDados();
     }
 }

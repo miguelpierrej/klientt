@@ -30,6 +30,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/login", "/registo", "/verificar-email",
                                 "/verificar-email/reenviar", "/verifica-email", "/verifica-email/status",
                                 "/recuperar-senha", "/redefinir-senha", "/css/**", "/favicon.svg",
+                                "/robots.txt", "/sitemap.xml", "/og-image.svg",
                                 "/api/scraper/**", "/api/stripe/**").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form

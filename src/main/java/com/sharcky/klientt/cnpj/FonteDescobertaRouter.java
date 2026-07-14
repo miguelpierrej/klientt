@@ -2,6 +2,8 @@ package com.sharcky.klientt.cnpj;
 
 import com.sharcky.klientt.cnpj.config.DescobertaProperties;
 import com.sharcky.klientt.cnpj.dto.EmpresaPayload;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +22,8 @@ import java.util.List;
 @Primary
 public class FonteDescobertaRouter implements FonteCnpj {
 
+    private static final Logger log = LoggerFactory.getLogger(FonteDescobertaRouter.class);
+
     private final MinhaReceitaFonte minhaReceita;
     private final ApiGeridaCnpjFonte casaDosDados;
     private final DescobertaProperties descoberta;
@@ -33,9 +37,19 @@ public class FonteDescobertaRouter implements FonteCnpj {
 
     @Override
     public List<EmpresaPayload> buscarPorCnae(String cnae, String municipio, int limite) {
-        return descoberta.usaCasaDosDados()
-                ? casaDosDados.buscarPorCnae(cnae, municipio, limite)
-                : minhaReceita.buscarPorCnae(cnae, municipio, limite);
+        if (descoberta.usaCasaDosDados()) {
+            return casaDosDados.buscarPorCnae(cnae, municipio, limite);
+        }
+        try {
+            return minhaReceita.buscarPorCnae(cnae, municipio, limite);
+        } catch (FonteDescobertaException ex) {
+            if (descoberta.fallbackAtivo()) {
+                log.info("Minha Receita indisponível (cnae={}) — fallback para Casa dos Dados: {}", cnae, ex.getMessage());
+                return casaDosDados.buscarPorCnae(cnae, municipio, limite);
+            }
+            log.warn("Minha Receita indisponível (cnae={}), sem fallback: {}", cnae, ex.getMessage());
+            return List.of();
+        }
     }
 
     @Override
@@ -45,8 +59,21 @@ public class FonteDescobertaRouter implements FonteCnpj {
 
     @Override
     public Pagina buscarPaginaPorCnae(String cnae, String municipio, String cursor, int tamanho) {
-        return descoberta.usaCasaDosDados()
-                ? casaDosDados.buscarPaginaPorCnae(cnae, municipio, cursor, tamanho)
-                : minhaReceita.buscarPaginaPorCnae(cnae, municipio, cursor, tamanho);
+        if (descoberta.usaCasaDosDados()) {
+            return casaDosDados.buscarPaginaPorCnae(cnae, municipio, cursor, tamanho);
+        }
+        try {
+            // Sucesso (mesmo vazio = "sem resultados") NÃO aciona o fallback — só a falha real (exceção).
+            return minhaReceita.buscarPaginaPorCnae(cnae, municipio, cursor, tamanho);
+        } catch (FonteDescobertaException ex) {
+            // Fallback só na PÁGINA INICIAL (cursor null): o cursor é de uma fonte específica, e a página
+            // do fallback vem sem cursor, logo sem "carregar mais" (modo degradado).
+            if (descoberta.fallbackAtivo() && cursor == null) {
+                log.info("Minha Receita indisponível (cnae={}) — fallback para Casa dos Dados: {}", cnae, ex.getMessage());
+                return casaDosDados.buscarPaginaPorCnae(cnae, municipio, null, tamanho);
+            }
+            log.warn("Minha Receita indisponível (cnae={}), sem fallback: {}", cnae, ex.getMessage());
+            return new Pagina(List.of(), null);
+        }
     }
 }

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Klientt — leads B2B por nicho com contato direto">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#1e3a8a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <text x="90" y="200" font-family="Arial, Helvetica, sans-serif" font-size="88" font-weight="700" fill="#ffffff" letter-spacing="-2">Klientt</text>
+  <text x="90" y="320" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="700" fill="#ffffff">Leads B2B do seu nicho,</text>
+  <text x="90" y="388" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="700" fill="#bfdbfe">com o contato direto de quem decide.</text>
+  <text x="90" y="470" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#e0e7ff">Telefone, e-mail e sócios direto da Receita Federal · 1ª página grátis</text>
+  <rect x="90" y="520" width="260" height="64" rx="12" fill="#ffffff"/>
+  <text x="220" y="562" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#2563eb">Criar conta grátis</text>
+</svg>

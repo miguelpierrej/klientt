@@ -4,11 +4,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Klientt — empresas do seu nicho com contacto direto e sócios</title>
+
+    <title>Klientt — leads B2B por nicho (CNAE) com contato direto</title>
     <meta name="description"
-          content="Descubra empresas B2B por nicho (CNAE) e região, com telefone, email e sócios diretos da Receita Federal — incluindo quem não tem presença digital. 1ª página grátis.">
+          content="Encontre empresas B2B por nicho (CNAE) e região no Brasil, com telefone, e-mail e sócios direto da Receita Federal — inclusive quem não tem site. 1ª página grátis.">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="canonical" href="https://klientt.com.br/">
+
+    <!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Klientt">
+    <meta property="og:locale" content="pt_BR">
+    <meta property="og:url" content="https://klientt.com.br/">
+    <meta property="og:title" content="Klientt — leads B2B por nicho (CNAE) com contato direto">
+    <meta property="og:description"
+          content="Empresas B2B por nicho e região no Brasil, com telefone, e-mail e sócios direto da Receita Federal — inclusive quem não tem site. 1ª página grátis.">
+    <meta property="og:image" content="https://klientt.com.br/og-image.svg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Klientt — leads B2B por nicho (CNAE) com contato direto">
+    <meta name="twitter:description"
+          content="Empresas B2B por nicho e região no Brasil, com telefone, e-mail e sócios da Receita Federal. 1ª página grátis.">
+    <meta name="twitter:image" content="https://klientt.com.br/og-image.svg">
+
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/app.css}">
+
+    <!-- Dados estruturados (schema.org) -->
+    <script type="application/ld+json" th:inline="none">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "name": "Klientt",
+          "url": "https://klientt.com.br/",
+          "logo": "https://klientt.com.br/favicon.svg",
+          "description": "Geração de leads B2B no Brasil por nicho (CNAE) e região, com contatos e sócios da Receita Federal."
+        },
+        {
+          "@type": "WebSite",
+          "name": "Klientt",
+          "url": "https://klientt.com.br/",
+          "inLanguage": "pt-BR"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Klientt",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://klientt.com.br/",
+          "description": "Encontre empresas B2B por nicho (CNAE) e região, com telefone, e-mail e sócios direto da Receita Federal.",
+          "offers": {
+            "@type": "Offer",
+            "price": "29.90",
+            "priceCurrency": "BRL",
+            "description": "3000 leads"
+          }
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
 
@@ -17,12 +77,12 @@
     <div class="lp-wrap lp-nav-inner">
         <a class="lp-marca" th:href="@{/}">Klientt</a>
         <div class="lp-nav-acoes">
-            <a class="lp-link lp-esconde-mobile" href="#o-que-recebe">O que recebe</a>
+            <a class="lp-link lp-esconde-mobile" href="#o-que-recebe">O que você recebe</a>
             <a class="lp-link lp-esconde-mobile" href="#preco">Preço</a>
             <a class="lp-link lp-esconde-mobile" href="#faq">FAQ</a>
             <a sec:authorize="!isAuthenticated()" class="lp-link" th:href="@{/login}">Entrar</a>
             <a sec:authorize="!isAuthenticated()" class="btn" th:href="@{/registo}">Criar conta grátis</a>
-            <a sec:authorize="isAuthenticated()" class="btn" th:href="@{/app}">Ir para a app &rarr;</a>
+            <a sec:authorize="isAuthenticated()" class="btn" th:href="@{/app}">Ir para o app &rarr;</a>
         </div>
     </div>
 </nav>
@@ -31,16 +91,16 @@
 <header class="lp-hero">
     <div class="lp-wrap">
         <p class="lp-eyebrow">Geração de leads B2B · Brasil</p>
-        <h1 class="lp-titulo">Empresas do seu nicho,<br><span>com o contacto direto de quem decide.</span></h1>
+        <h1 class="lp-titulo">Empresas do seu nicho,<br><span>com o contato direto de quem decide.</span></h1>
         <p class="lp-sub">
-            Descubra negócios formais por segmento (CNAE) e região — com <strong>telefone, email e sócios</strong>
-            direto dos registos da Receita Federal. Incluindo as empresas <strong>sem presença digital</strong>,
-            que as ferramentas de "marketing" não lhe mostram.
+            Descubra negócios formais por segmento (CNAE) e região — com <strong>telefone, e-mail e sócios</strong>
+            direto dos registros da Receita Federal. Incluindo as empresas <strong>sem presença digital</strong>,
+            que as ferramentas de "marketing" não mostram pra você.
         </p>
         <div class="lp-cta">
             <a sec:authorize="!isAuthenticated()" class="btn btn-grande" th:href="@{/registo}">Começar grátis</a>
             <a sec:authorize="!isAuthenticated()" class="lp-link-claro" th:href="@{/login}">Já tenho conta &rarr;</a>
-            <a sec:authorize="isAuthenticated()" class="btn btn-grande" th:href="@{/app}">Abrir a app &rarr;</a>
+            <a sec:authorize="isAuthenticated()" class="btn btn-grande" th:href="@{/app}">Abrir o app &rarr;</a>
         </div>
         <p class="lp-nota">A 1ª página de cada busca é grátis. Sem cartão para começar.</p>
     </div>
@@ -50,12 +110,12 @@
 <section class="lp-seccao" id="o-que-recebe">
     <div class="lp-wrap lp-split">
         <div class="lp-split-texto">
-            <h2 class="lp-h2-esq">O que recebe em cada empresa</h2>
+            <h2 class="lp-h2-esq">O que você recebe em cada empresa</h2>
             <p class="lp-lead">Não é só um nome e um telefone. Cada lead vem com o retrato completo do negócio,
                 pronto para abordar com contexto.</p>
             <ul class="lp-campos">
                 <li><svg th:replace="~{fragments/icones :: check}"></svg> Razão social e nome fantasia</li>
-                <li><svg th:replace="~{fragments/icones :: check}"></svg> Telefone(s) e email(s) diretos</li>
+                <li><svg th:replace="~{fragments/icones :: check}"></svg> Telefone(s) e e-mail(s) diretos</li>
                 <li><svg th:replace="~{fragments/icones :: check}"></svg> <strong>Sócios (QSA)</strong> — os decisores da empresa</li>
                 <li><svg th:replace="~{fragments/icones :: check}"></svg> CNPJ, situação cadastral e porte</li>
                 <li><svg th:replace="~{fragments/icones :: check}"></svg> Atividade (CNAE) principal e secundárias</li>
@@ -79,7 +139,7 @@
             </div>
             <dl class="lp-mockup-dados">
                 <dt>Telefone</dt><dd>(14) 3232-1010</dd>
-                <dt>Email</dt><dd>contato@saborcaseiro.com.br</dd>
+                <dt>E-mail</dt><dd>contato@saborcaseiro.com.br</dd>
                 <dt>CNPJ</dt><dd>12.345.678/0001-90</dd>
                 <dt>Abertura</dt><dd>2015 · CNAE 5611-2/01</dd>
                 <dt>Sócios</dt><dd>Maria Silva (Administradora), João Souza</dd>
@@ -97,7 +157,7 @@
             <div class="lp-card">
                 <div class="lp-icone"><svg th:replace="~{fragments/icones :: escudo}"></svg></div>
                 <h3>Dados oficiais, sempre da fonte</h3>
-                <p>Direto dos registos públicos da Receita Federal — não uma base comprada e desatualizada.</p>
+                <p>Direto dos registros públicos da Receita Federal — não uma base comprada e desatualizada.</p>
             </div>
             <div class="lp-card">
                 <div class="lp-icone"><svg th:replace="~{fragments/icones :: socios}"></svg></div>
@@ -106,13 +166,13 @@
             </div>
             <div class="lp-card">
                 <div class="lp-icone"><svg th:replace="~{fragments/icones :: loja}"></svg></div>
-                <h3>Encontra quem não tem site</h3>
+                <h3>Encontre quem não tem site</h3>
                 <p>Empresas formais ativas sem site nem redes — invisíveis para quem só olha o "digital".</p>
             </div>
             <div class="lp-card">
                 <div class="lp-icone"><svg th:replace="~{fragments/icones :: alvo}"></svg></div>
                 <h3>Precisão por atividade</h3>
-                <p>Confirma o CNAE antes de buscar (com catálogo IBGE + IA). Nada de resultados de outro ramo.</p>
+                <p>Você confirma o CNAE antes de buscar (catálogo IBGE + IA). Nada de resultados de outro ramo.</p>
             </div>
             <div class="lp-card">
                 <div class="lp-icone"><svg th:replace="~{fragments/icones :: telefone}"></svg></div>
@@ -121,8 +181,8 @@
             </div>
             <div class="lp-card">
                 <div class="lp-icone"><svg th:replace="~{fragments/icones :: download}"></svg></div>
-                <h3>Exporta em 1 clique</h3>
-                <p>Lista contactável em CSV (UTF-8, pronto para Excel/CRM). Filtre "só com contato" e ordene.</p>
+                <h3>Exporte em 1 clique</h3>
+                <p>Lista com contatos em CSV (UTF-8, pronta para Excel/CRM). Filtre "só com contato" e ordene.</p>
             </div>
         </div>
     </div>
@@ -131,18 +191,18 @@
 <!-- Como funciona -->
 <section class="lp-seccao">
     <div class="lp-wrap">
-        <h2 class="lp-h2">Da busca ao contacto, em 3 passos</h2>
+        <h2 class="lp-h2">Da busca ao contato, em 3 passos</h2>
         <div class="lp-passos">
             <div class="lp-passo"><span class="lp-num">1</span>
                 <h3>Diga o que procura</h3>
-                <p>Nicho + região — ex.: <em>"restaurantes em Bauru"</em>. Confirma a atividade sugerida.</p>
+                <p>Nicho + região — ex.: <em>"restaurantes em Bauru"</em>. Confirme a atividade sugerida.</p>
             </div>
             <div class="lp-passo"><span class="lp-num">2</span>
-                <h3>Receba a lista contactável</h3>
-                <p>A 1ª página é grátis, com contactos e sócios de cada empresa. Filtre e ordene.</p>
+                <h3>Receba a lista com contatos</h3>
+                <p>A 1ª página é grátis, com contatos e sócios de cada empresa. Filtre e ordene.</p>
             </div>
             <div class="lp-passo"><span class="lp-num">3</span>
-                <h3>Contacte e exporte</h3>
+                <h3>Entre em contato e exporte</h3>
                 <p>Veja mais com créditos, exporte em CSV e leve para o seu outreach.</p>
             </div>
         </div>
@@ -152,12 +212,12 @@
 <!-- Para quem é -->
 <section class="lp-seccao lp-passos-seccao">
     <div class="lp-wrap">
-        <h2 class="lp-h2">Feito para quem prospeta</h2>
+        <h2 class="lp-h2">Feito para quem prospecta</h2>
         <div class="lp-personas">
             <div class="lp-card">
                 <h3>Agências de marketing</h3>
-                <p>Encontre negócios do nicho e da região que ainda não têm site ou redes — e ofereça-lhes
-                    exatamente o que falta, com o contacto do dono na mão.</p>
+                <p>Encontre negócios do nicho e da região que ainda não têm site ou redes — e ofereça a eles
+                    exatamente o que falta, com o contato do dono na mão.</p>
             </div>
             <div class="lp-card">
                 <h3>Vendas B2B / SaaS</h3>
@@ -178,7 +238,7 @@
             <p class="lp-preco-detalhe">Pagamento único. Os leads acumulam a cada compra — nunca expiram.</p>
             <ul class="lp-preco-lista">
                 <li><svg th:replace="~{fragments/icones :: check}"></svg> 1ª página de cada busca sempre grátis</li>
-                <li><svg th:replace="~{fragments/icones :: check}"></svg> Contactos, sócios e cadastrais completos</li>
+                <li><svg th:replace="~{fragments/icones :: check}"></svg> Contatos, sócios e cadastrais completos</li>
                 <li><svg th:replace="~{fragments/icones :: check}"></svg> Exportação em CSV · cartão ou Pix</li>
             </ul>
             <a sec:authorize="!isAuthenticated()" class="btn btn-grande" th:href="@{/registo}">Começar grátis</a>
@@ -193,16 +253,16 @@
         <h2 class="lp-h2">Perguntas frequentes</h2>
         <div class="lp-faq">
             <details><summary>O que conta como um "lead"?</summary>
-                <p>Uma empresa entregue com os seus dados cadastrais e contactos. A 1ª página de cada busca não
-                    consome créditos; só ver mais empresas é que usa o seu saldo.</p></details>
+                <p>Uma empresa entregue com seus dados cadastrais e contatos. A 1ª página de cada busca não
+                    consome créditos; só ver mais empresas consome seu saldo.</p></details>
             <details><summary>Os créditos expiram?</summary>
-                <p>Não. O pagamento é único e os leads acumulam-se — se comprar duas vezes, somam.</p></details>
+                <p>Não. O pagamento é único e os leads se acumulam — se comprar duas vezes, somam.</p></details>
             <details><summary>De onde vêm os dados?</summary>
-                <p>Dos registos públicos da Receita Federal (via projetos abertos), complementados com dados
+                <p>Dos registros públicos da Receita Federal (via projetos abertos), complementados com dados
                     de presença digital (site, redes, Google) quando existem.</p></details>
             <details><summary>É legal? E a LGPD?</summary>
-                <p>São dados de <strong>empresa</strong> (CNPJ, contactos comerciais públicos), de baixo risco.
-                    Ainda assim, trate os contactos com responsabilidade e respeite pedidos de opt-out.</p></details>
+                <p>São dados de <strong>empresa</strong> (CNPJ, contatos comerciais públicos), de baixo risco.
+                    Ainda assim, trate os contatos com responsabilidade e respeite pedidos de opt-out.</p></details>
             <details><summary>Que métodos de pagamento aceitam?</summary>
                 <p>Cartão e Pix, via Stripe — checkout seguro, sem sair do site.</p></details>
             <details><summary>Posso exportar os leads?</summary>
@@ -214,17 +274,17 @@
 <!-- CTA final -->
 <section class="lp-final">
     <div class="lp-wrap">
-        <h2>Pronto a encontrar os seus próximos clientes?</h2>
+        <h2>Pronto para encontrar seus próximos clientes?</h2>
         <p class="lp-final-sub">Comece grátis — a 1ª página de cada busca não custa nada.</p>
         <a sec:authorize="!isAuthenticated()" class="btn btn-grande" th:href="@{/registo}">Criar conta grátis</a>
-        <a sec:authorize="isAuthenticated()" class="btn btn-grande" th:href="@{/app}">Ir para a app &rarr;</a>
+        <a sec:authorize="isAuthenticated()" class="btn btn-grande" th:href="@{/app}">Ir para o app &rarr;</a>
     </div>
 </section>
 
 <footer class="lp-rodape">
     <div class="lp-wrap">
         <span class="lp-marca">Klientt</span>
-        <span class="lp-rodape-txt">Leads B2B com contacto direto — dados públicos da Receita Federal · Brasil.</span>
+        <span class="lp-rodape-txt">Leads B2B com contato direto — dados públicos da Receita Federal · Brasil.</span>
     </div>
 </footer>
 

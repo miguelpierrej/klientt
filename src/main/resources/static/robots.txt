@@ -1,0 +1,18 @@
+# Klientt — robots.txt
+# Indexa a landing pública; bloqueia a app autenticada e endpoints privados/internos.
+
+User-agent: *
+Allow: /$
+Allow: /login
+Allow: /registo
+Disallow: /app
+Disallow: /conta
+Disallow: /creditos
+Disallow: /buscar
+Disallow: /recuperar-senha
+Disallow: /redefinir-senha
+Disallow: /verifica-email
+Disallow: /verificar-email
+Disallow: /api/
+
+Sitemap: https://klientt.com.br/sitemap.xml

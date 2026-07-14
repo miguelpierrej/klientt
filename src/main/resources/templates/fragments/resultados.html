@@ -114,7 +114,7 @@
     <ul class="lista-leads" th:unless="${pagina.total() == 0}">
         <li class="lead clicavel" th:each="lead : ${pagina.leads()}"
             th:attr="hx-get=@{/empresa/{id}(id=${lead.id()})}"
-            hx-target="#modal-container" hx-swap="innerHTML" title="Ver detalhes">
+            hx-target="#modal-container" hx-swap="innerHTML" hx-indicator="#modal-carregando" title="Ver detalhes">
             <div class="lead-info">
                 <h3 th:text="${lead.nome()}">Nome</h3>
                 <p class="cidade" th:text="${lead.cidade()}">Cidade</p>
@@ -154,40 +154,57 @@
     </nav>
 </div>
 
-<!-- Confirmação do CNAE (busca por nicho): escolher a atividade antes de buscar -->
-<div th:fragment="confirmar-cnae" class="confirmar-cnae">
-    <div class="resultados-cabecalho">
-        <h2>Qual atividade procura?</h2>
-        <p class="ajuda">Confirme o CNAE para &laquo;<span th:text="${termo}">termo</span>&raquo;.
-            Isto afina a busca e evita resultados de outro ramo.</p>
+<!-- Confirmação do CNAE (busca por nicho): escolher a atividade antes de buscar. Modal. -->
+<div th:fragment="confirmar-cnae" class="modal-overlay" onclick="if (event.target === this) this.remove()">
+    <div class="modal cnae-modal">
+        <button type="button" class="modal-fechar" aria-label="Fechar"
+                onclick="this.closest('.modal-overlay').remove()">&times;</button>
+
+        <div class="modal-cabecalho">
+            <h2>Qual atividade você procura?</h2>
+        </div>
+        <p class="cnae-intro">
+            Para «<strong th:text="${termo}">termo</strong>» encontramos as atividades abaixo. O
+            <strong>CNAE</strong> é a classificação oficial da atividade de cada empresa —
+            escolha a que <strong>melhor descreve</strong> quem você quer encontrar. Isso deixa a busca
+            precisa e evita empresas de outro ramo.
+        </p>
+
+        <form class="cnae-form" hx-post="/buscar" hx-target="#resultados" hx-swap="innerHTML">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="tipo" value="NICHO"/>
+            <input type="hidden" name="termo" th:value="${termo}"/>
+            <input type="hidden" name="regiao" th:value="${regiao}"/>
+
+            <ul class="cnae-opcoes" th:unless="${#lists.isEmpty(candidatos)}">
+                <li th:each="c,it : ${candidatos}">
+                    <label>
+                        <input type="radio" name="cnae" th:value="${c.codigo()}" th:checked="${it.index == 0}"/>
+                        <span class="cnae-texto">
+                            <span class="cnae-desc" th:text="${c.descricao()}">descrição</span>
+                            <span class="cnae-cod" th:text="${c.codigo()}">código</span>
+                        </span>
+                    </label>
+                </li>
+            </ul>
+
+            <p class="vazio" th:if="${#lists.isEmpty(candidatos)}">
+                Não encontramos uma atividade para «<span th:text="${termo}">termo</span>». Tente um termo
+                mais específico (ex.: <em>restaurante</em>, <em>barbearia</em>) ou informe o código CNAE abaixo.</p>
+
+            <label class="cnae-manual">
+                <span class="cnae-manual-titulo" th:if="${#lists.isEmpty(candidatos)}">Código CNAE</span>
+                <span class="cnae-manual-titulo" th:unless="${#lists.isEmpty(candidatos)}">Não é nenhuma dessas? Informe outro código</span>
+                <input type="text" name="cnaeOutro" placeholder="ex.: 9602-5/01" autocomplete="off"/>
+                <span class="ajuda">Só se você já souber o código exato (formato 0000-0/00).</span>
+            </label>
+
+            <div class="cnae-acoes">
+                <button type="button" class="btn-secundario" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+                <button type="submit" class="btn">Confirmar e buscar</button>
+            </div>
+        </form>
     </div>
-
-    <form class="cnae-form"
-          hx-post="/buscar" hx-target="#resultados" hx-swap="innerHTML">
-        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-        <input type="hidden" name="tipo" value="NICHO"/>
-        <input type="hidden" name="termo" th:value="${termo}"/>
-        <input type="hidden" name="regiao" th:value="${regiao}"/>
-
-        <ul class="cnae-opcoes" th:unless="${#lists.isEmpty(candidatos)}">
-            <li th:each="c,it : ${candidatos}">
-                <label>
-                    <input type="radio" name="cnae" th:value="${c.codigo()}" th:checked="${it.index == 0}"/>
-                    <span th:text="${c.descricao()}">descrição</span>
-                    <span class="ajuda" th:text="${c.codigo()}">código</span>
-                </label>
-            </li>
-        </ul>
-
-        <p class="vazio" th:if="${#lists.isEmpty(candidatos)}">
-            Não encontramos uma atividade para esse termo. Informe o código CNAE manualmente.</p>
-
-        <label class="cnae-manual">Outro código CNAE
-            <input type="text" name="cnaeOutro" placeholder="ex.: 9602-5/01"/>
-        </label>
-
-        <button type="submit" class="btn">Confirmar e buscar</button>
-    </form>
 </div>
 
 <!-- Fragmento de erro (validação / falha) -->

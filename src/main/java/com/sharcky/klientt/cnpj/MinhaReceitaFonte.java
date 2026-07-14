@@ -86,10 +86,11 @@ public class MinhaReceitaFonte implements FonteCnpj {
         List<EmpresaPayload> out = new ArrayList<>();
         String cursor = cursorInicial;
         int paginas = 0;
-        try {
-            while (out.size() < tamanho && paginas < properties.getMaxPaginas()) {
-                final String cursorAtual = cursor;
-                RespostaBusca resp = restClient.get()
+        while (out.size() < tamanho && paginas < properties.getMaxPaginas()) {
+            final String cursorAtual = cursor;
+            RespostaBusca resp;
+            try {
+                resp = restClient.get()
                         .uri(b -> {
                             b.path("/").queryParam("cnae", codigoCnae).queryParam("limit", lote);
                             if (uf != null) b.queryParam("uf", uf);
@@ -99,21 +100,29 @@ public class MinhaReceitaFonte implements FonteCnpj {
                         })
                         .retrieve()
                         .body(RespostaBusca.class);
-                paginas++;
-
-                if (resp == null || resp.data() == null || resp.data().isEmpty()) {
-                    cursor = null;   // esgotado
-                    break;
+            } catch (Exception ex) {
+                if (paginas == 0) {
+                    // Falha logo na 1ª página → fonte indisponível (não é "sem resultados"):
+                    // propaga para o router poder tentar o fallback.
+                    throw new FonteDescobertaException(
+                            "Minha Receita indisponível (cnae=" + cnae + "): " + ex.getMessage(), ex);
                 }
-                resp.data().forEach(e -> out.add(toPayload(e)));   // consome a página inteira
-                cursor = resp.cursor();
-                if (cursor == null || cursor.isBlank()) {
-                    break;   // esgotado
-                }
+                // Páginas seguintes: mantém o que já veio (parcial) em vez de perder tudo.
+                log.warn("Falha ao paginar Minha Receita (cnae={}, uf={}, cidade={}): {}", cnae, uf, cidade, ex.getMessage());
+                cursor = null;
+                break;
             }
-        } catch (Exception ex) {
-            log.warn("Falha na descoberta Minha Receita (cnae={}, uf={}, cidade={}): {}", cnae, uf, cidade, ex.getMessage());
-            cursor = null;
+            paginas++;
+
+            if (resp == null || resp.data() == null || resp.data().isEmpty()) {
+                cursor = null;   // esgotado (sem resultados — não é falha)
+                break;
+            }
+            resp.data().forEach(e -> out.add(toPayload(e)));   // consome a página inteira
+            cursor = resp.cursor();
+            if (cursor == null || cursor.isBlank()) {
+                break;   // esgotado
+            }
         }
         return new Pagina(out, (cursor == null || cursor.isBlank()) ? null : cursor);
     }
