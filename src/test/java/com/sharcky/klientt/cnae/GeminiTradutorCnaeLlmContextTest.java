@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Com o fallback LLM ligado (klientt.cnae.enabled=true), o contexto tem de arrancar e criar o
  * {@link GeminiTradutorCnaeLlm} — que não depende de nenhum bean ObjectMapper (o app corre em
- * Jackson 3). Guarda contra a regressão "required a bean of type ObjectMapper".
+ * Jackson 3). Protege contra a regressão "required a bean of type ObjectMapper".
  */
 @SpringBootTest
 @TestPropertySource(properties = {

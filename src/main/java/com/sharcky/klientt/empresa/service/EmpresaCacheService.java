@@ -3,7 +3,7 @@ package com.sharcky.klientt.empresa.service;
 import com.sharcky.klientt.empresa.model.Empresa;
 
 /**
- * Cache de empresas (ARQUITETURA §3): guarda/atualiza empresas para reutilização
+ * Cache de empresas (ARQUITETURA §3): armazena/atualiza empresas para reutilização
  * entre buscas, evitando recoletar. Identidade por CNPJ; fallback nome + cidade.
  */
 public interface EmpresaCacheService {

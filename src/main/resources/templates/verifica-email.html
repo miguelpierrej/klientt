@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Klientt — confirma o teu email</title>
+    <title>Klientt — confirme seu e-mail</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
@@ -16,22 +16,22 @@
 
 <main class="container conta">
     <div class="cartao-conta">
-        <h2>Confirma o teu email</h2>
-        <p class="aviso ok" th:if="${param.reenviado}">Email reenviado. Verifica a caixa de entrada.</p>
+        <h2>Confirme seu e-mail</h2>
+        <p class="aviso ok" th:if="${param.reenviado}">E-mail reenviado. Verifique sua caixa de entrada.</p>
         <p>
-            Enviámos um link de confirmação para
-            <strong th:if="${email}" th:text="${email}">o teu email</strong><span th:unless="${email}">o teu email</span>.
-            Clica no link para ativar a conta e poderes entrar.
+            Enviamos um link de confirmação para
+            <strong th:if="${email}" th:text="${email}">seu e-mail</strong><span th:unless="${email}">seu e-mail</span>.
+            Clique no link para ativar sua conta e poder entrar.
         </p>
-        <p class="ajuda">Não recebeste? Vê o spam ou reenvia abaixo (o link é válido por 24 horas).</p>
+        <p class="ajuda">Não recebeu? Verifique o spam ou reenvie abaixo (o link é válido por 24 horas).</p>
 
         <form method="post" th:action="@{/verificar-email/reenviar}" class="form-conta">
             <input type="hidden" name="email" th:value="${email}">
             <div class="campo" th:unless="${email}">
-                <label for="email">Email</label>
+                <label for="email">E-mail</label>
                 <input type="email" id="email" name="email" required>
             </div>
-            <button type="submit" class="btn">Reenviar email de confirmação</button>
+            <button type="submit" class="btn">Reenviar e-mail de confirmação</button>
         </form>
 
         <p class="ligacao"><a th:href="@{/login}">Voltar ao login</a></p>

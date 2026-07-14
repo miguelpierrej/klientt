@@ -9,17 +9,17 @@ import jakarta.validation.constraints.Size;
  */
 public record RegistoRequest(
 
-        @NotBlank(message = "Indique o seu nome.")
+        @NotBlank(message = "Informe seu nome.")
         @Size(max = 150)
         String nome,
 
-        @NotBlank(message = "Indique o seu email.")
-        @Email(message = "Email inválido.")
+        @NotBlank(message = "Informe seu e-mail.")
+        @Email(message = "E-mail inválido.")
         @Size(max = 255)
         String email,
 
-        @NotBlank(message = "Defina uma password.")
-        @Size(min = 8, max = 100, message = "A password deve ter pelo menos 8 caracteres.")
+        @NotBlank(message = "Defina uma senha.")
+        @Size(min = 8, max = 100, message = "A senha deve ter pelo menos 8 caracteres.")
         String password
 ) {
 }

@@ -48,13 +48,28 @@ public class Utilizador {
     @Column(name = "token_verificacao_expira_em")
     private LocalDateTime tokenVerificacaoExpiraEm;
 
+    /** Token de uso único para redefinir a password (null quando não há pedido pendente). */
+    @Column(name = "token_reset", length = 100)
+    private String tokenReset;
+
+    /** Validade do token de redefinição de password. */
+    @Column(name = "token_reset_expira_em")
+    private LocalDateTime tokenResetExpiraEm;
+
     @Column(name = "criado_em", nullable = false)
     private LocalDateTime criadoEm = LocalDateTime.now();
 
-    /** Token válido e ainda dentro do prazo? */
+    /** Token de confirmação válido e ainda dentro do prazo? */
     public boolean tokenValido(LocalDateTime agora) {
         return tokenVerificacao != null
                 && tokenVerificacaoExpiraEm != null
                 && tokenVerificacaoExpiraEm.isAfter(agora);
+    }
+
+    /** Token de redefinição de password válido e ainda dentro do prazo? */
+    public boolean tokenResetValido(LocalDateTime agora) {
+        return tokenReset != null
+                && tokenResetExpiraEm != null
+                && tokenResetExpiraEm.isAfter(agora);
     }
 }

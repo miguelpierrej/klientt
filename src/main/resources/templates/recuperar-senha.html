@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klientt — recuperar senha</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="topo">
+    <div class="container">
+        <h1 class="logo">Klientt</h1>
+    </div>
+</header>
+
+<main class="container conta">
+    <h2>Recuperar senha</h2>
+
+    <p class="aviso ok" th:if="${param.enviado}">
+        Se existir uma conta com esse e-mail, enviamos um link para redefinir a senha.
+    </p>
+    <p class="aviso erro" th:if="${param.tokenInvalido}">
+        Link de redefinição inválido ou expirado. Solicite um novo abaixo.
+    </p>
+
+    <p th:unless="${param.enviado}">Informe seu e-mail e enviaremos um link para definir uma nova senha.</p>
+
+    <form th:unless="${param.enviado}" method="post" th:action="@{/recuperar-senha}" class="form-conta">
+        <div class="campo">
+            <label for="email">E-mail</label>
+            <input type="email" id="email" name="email" required autofocus>
+        </div>
+        <button type="submit" class="btn">Enviar link</button>
+    </form>
+
+    <p class="ligacao"><a th:href="@{/login}">Voltar ao login</a></p>
+</main>
+</body>
+</html>

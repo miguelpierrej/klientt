@@ -17,7 +17,7 @@ public interface JobService {
     /** Regista (ou atualiza) uma empresa encontrada para o job. */
     void registarResultado(Long jobId, Long empresaId);
 
-    /** Guarda o cursor da fonte para "carregar mais" (null = não há mais). */
+    /** Armazena o cursor da fonte para "carregar mais" (null = não há mais). */
     void registarCursor(Long jobId, String cursor);
 
     void concluir(Long jobId);

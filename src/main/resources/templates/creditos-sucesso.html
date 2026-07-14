@@ -21,16 +21,16 @@
     <div class="cartao-conta">
         <h2><svg th:replace="~{fragments/icones :: sucesso}"></svg> Obrigado!</h2>
         <p th:if="${creditados > 0}">
-            Pagamento confirmado — <strong th:text="${creditados}">3000</strong> leads adicionados ao teu saldo.
+            Pagamento confirmado — <strong th:text="${creditados}">3000</strong> leads adicionados ao seu saldo.
         </p>
         <p th:unless="${creditados > 0}">
-            O teu pagamento foi recebido. Se o saldo abaixo ainda não refletir a compra,
-            atualiza esta página dentro de instantes.
+            Seu pagamento foi recebido. Se o saldo abaixo ainda não refletir a compra,
+            atualize esta página em instantes.
         </p>
         <p>Saldo disponível: <strong th:text="${saldo}">0</strong> leads.</p>
         <p>
             <a class="btn" th:href="@{/app}">Voltar às buscas</a>
-            <a class="btn-link" th:href="@{/conta}">Ver o meu saldo</a>
+            <a class="btn-link" th:href="@{/conta}">Ver meu saldo</a>
         </p>
     </div>
 </main>

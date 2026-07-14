@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klientt — nova senha</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="topo">
+    <div class="container">
+        <h1 class="logo">Klientt</h1>
+    </div>
+</header>
+
+<main class="container conta">
+    <h2>Definir nova senha</h2>
+
+    <form method="post" th:action="@{/redefinir-senha}" th:object="${redefinirSenhaRequest}" class="form-conta">
+        <input type="hidden" th:field="*{token}">
+        <div class="campo">
+            <label for="password">Nova senha</label>
+            <input type="password" id="password" th:field="*{password}" required autofocus
+                   placeholder="Pelo menos 8 caracteres">
+            <p class="aviso erro" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">Erro</p>
+        </div>
+        <button type="submit" class="btn">Salvar nova senha</button>
+    </form>
+
+    <p class="ligacao"><a th:href="@{/login}">Voltar ao login</a></p>
+</main>
+</body>
+</html>

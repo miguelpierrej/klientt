@@ -203,7 +203,7 @@ public class MinhaReceitaFonte implements FonteCnpj {
         return null;
     }
 
-    /** Município comparável: maiúsculas, sem acentos (como o Minha Receita guarda, ex.: "SAO PAULO"). */
+    /** Município comparável: maiúsculas, sem acentos (como o Minha Receita armazena, ex.: "SAO PAULO"). */
     static String normalizarMunicipio(String s) {
         if (s == null) {
             return null;

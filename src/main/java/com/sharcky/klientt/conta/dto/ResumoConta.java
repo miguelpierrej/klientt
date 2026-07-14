@@ -10,7 +10,7 @@ public record ResumoConta(
         long consumido,
         long disponivel
 ) {
-    /** Percentagem de créditos usada (0–100), para a barra de progresso. */
+    /** Porcentagem de créditos usada (0–100), para a barra de progresso. */
     public int percentagemUsada() {
         if (comprado <= 0) {
             return 0;

@@ -30,7 +30,7 @@
             <span class="erro-campo" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">erro</span>
         </div>
         <div class="campo">
-            <label for="password">Password</label>
+            <label for="password">Senha</label>
             <input type="password" id="password" th:field="*{password}" required>
             <span class="erro-campo" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">erro</span>
         </div>

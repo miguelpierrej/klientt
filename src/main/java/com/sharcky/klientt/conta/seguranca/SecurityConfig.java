@@ -1,6 +1,9 @@
 package com.sharcky.klientt.conta.seguranca;
 
+import com.sharcky.klientt.common.ratelimit.RateLimitFilter;
+import com.sharcky.klientt.common.ratelimit.RateLimiter;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -9,17 +12,24 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, RateLimiter rateLimiter,
+                                           @Value("${klientt.ratelimit.enabled:true}") boolean rateLimitEnabled)
+            throws Exception {
         http
+                // Rate limiting antes da autenticação (trava brute-force de login e spam de e-mail/busca).
+                .addFilterBefore(new RateLimitFilter(rateLimiter, rateLimitEnabled),
+                        UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         // Páginas públicas + callback do scraper (autenticado pelo token X-Klientt-Token).
                         .requestMatchers("/", "/login", "/registo", "/verificar-email",
-                                "/verificar-email/reenviar", "/verifica-email", "/css/**", "/favicon.svg",
+                                "/verificar-email/reenviar", "/verifica-email",
+                                "/recuperar-senha", "/redefinir-senha", "/css/**", "/favicon.svg",
                                 "/api/scraper/**", "/api/stripe/**").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(form -> form
@@ -31,7 +41,7 @@ public class SecurityConfig {
                         .logoutSuccessUrl("/login?logout")
                         .permitAll())
                 // Sessão expirada: num pedido HTMX manda redirecionar a página inteira p/ o login
-                // (senão o htmx injeta o HTML do login dentro do fragmento — o "ecrã bugado").
+                // (senão o htmx injeta o HTML do login dentro do fragmento — a "tela bugada").
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(entryPointHtmxAware()))
                 // Callbacks externos (scraper, webhook Stripe) não têm sessão → isentos de CSRF.
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/api/scraper/**", "/api/stripe/**"));

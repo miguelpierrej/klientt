@@ -42,7 +42,7 @@ public class ExportController {
         List<LeadDetalhe> leads = buscaService.exportar(jobId, utilizador.getId(), filtro);
         byte[] csv = csvWriter.escrever(leads);
 
-        // Sufixo de 4 dígitos aleatórios (0000–9999) para o nome do ficheiro.
+        // Sufixo de 4 dígitos aleatórios (0000–9999) para o nome do arquivo.
         String sufixo = String.format("%04d", ThreadLocalRandom.current().nextInt(10_000));
         ContentDisposition disposition = ContentDisposition.attachment()
                 .filename("leads-" + sufixo + ".csv").build();
