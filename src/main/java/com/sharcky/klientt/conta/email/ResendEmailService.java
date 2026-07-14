@@ -86,29 +86,35 @@ public class ResendEmailService implements EmailService {
                 .replace("{{link}}", link);   // href do botão, href e texto do fallback
     }
 
+    /**
+     * Shell do e-mail no visual editorial do site (índigo sobre papel quente, tinta). Tudo inline
+     * (requisito de e-mail). A fonte display (Bricolage) é best-effort via @import — clientes que
+     * não a suportam caem no fallback Arial; o layout e as cores carregam a marca de qualquer forma.
+     */
     private static final String LAYOUT = """
+            <style>@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&display=swap');</style>
             <div style="display:none;max-height:0;overflow:hidden;opacity:0">{{intro}}</div>
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:24px 0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f5f2;padding:28px 0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
               <tr><td align="center">
-                <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
-                  <tr><td bgcolor="#1e3a8a" style="background:linear-gradient(135deg,#2563eb 0%,#1e3a8a 100%);padding:32px 40px;text-align:center">
-                    <span style="color:#ffffff;font-size:30px;font-weight:700;letter-spacing:-1px">Klientt</span>
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border:1px solid #e7e4dd;border-radius:20px;overflow:hidden">
+                  <tr><td bgcolor="#3730a3" style="background:linear-gradient(135deg,#4f46e5 0%,#3730a3 100%);padding:34px 40px;text-align:center">
+                    <span style="font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;color:#ffffff;font-size:30px;font-weight:800;letter-spacing:-1px">Klientt</span>
                   </td></tr>
-                  <tr><td style="padding:36px 40px 8px 40px">
-                    <h1 style="margin:0 0 12px;font-size:22px;color:#0f172a">{{saudacao}}</h1>
-                    <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#334155">{{intro}}</p>
+                  <tr><td style="padding:38px 40px 8px 40px">
+                    <h1 style="font-family:'Bricolage Grotesque','Helvetica Neue',Arial,sans-serif;margin:0 0 12px;font-size:24px;font-weight:700;letter-spacing:-.5px;color:#17151f">{{saudacao}}</h1>
+                    <p style="margin:0 0 26px;font-size:15px;line-height:1.65;color:#4b4954">{{intro}}</p>
                     <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-                      <td bgcolor="#2563eb" style="border-radius:8px">
-                        <a href="{{link}}" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px">{{botao}}</a>
+                      <td bgcolor="#4f46e5" style="border-radius:999px">
+                        <a href="{{link}}" style="display:inline-block;padding:14px 30px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:999px">{{botao}}</a>
                       </td>
                     </tr></table>
-                    <p style="margin:26px 0 0;font-size:13px;line-height:1.6;color:#64748b">
+                    <p style="margin:28px 0 0;font-size:13px;line-height:1.6;color:#6b6a76">
                       Ou copie este link no navegador:<br>
-                      <a href="{{link}}" style="color:#2563eb;word-break:break-all">{{link}}</a>
+                      <a href="{{link}}" style="color:#4f46e5;word-break:break-all">{{link}}</a>
                     </p>
-                    <p style="margin:18px 0 0;font-size:13px;color:#64748b">{{nota}}</p>
+                    <p style="margin:18px 0 0;font-size:13px;color:#6b6a76">{{nota}}</p>
                   </td></tr>
-                  <tr><td style="padding:24px 40px 32px;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:12px;line-height:1.6">
+                  <tr><td style="padding:24px 40px 34px;border-top:1px solid #e7e4dd;color:#9a98a4;font-size:12px;line-height:1.6">
                     &copy; Klientt &mdash; gera&ccedil;&atilde;o de leads B2B.
                   </td></tr>
                 </table>
