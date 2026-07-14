@@ -35,3 +35,6 @@ build/
 ### Segredos / configs locais (NÃO commitar) ###
 *.env
 .env
+
+# Config de dev com segredos locais — NUNCA versionar
+src/main/resources/application-dev.properties
