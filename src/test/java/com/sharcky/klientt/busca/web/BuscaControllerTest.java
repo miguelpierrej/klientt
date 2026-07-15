@@ -31,10 +31,11 @@ class BuscaControllerTest {
     @Mock BuscaService buscaService;
     @Mock ResolvedorCnae resolvedorCnae;
     @Mock com.sharcky.klientt.conta.service.CreditosService creditosService;
+    @Mock com.sharcky.klientt.perfil.PerfilService perfilService;
     @Mock KlienttUserDetails utilizador;
 
     BuscaController controller() {
-        return new BuscaController(buscaService, resolvedorCnae, creditosService, 20);
+        return new BuscaController(buscaService, resolvedorCnae, creditosService, perfilService, 20);
     }
 
     @Test
@@ -96,7 +97,7 @@ class BuscaControllerTest {
     void filtrarPaginaDoisDevolveAFatiaEEstadoDoFiltro() {
         when(utilizador.getId()).thenReturn(1L);
         List<LeadResponse> vinteCinco = java.util.stream.IntStream.rangeClosed(1, 25)
-                .mapToObj(i -> new LeadResponse((long) i, "E" + i, "SP", null, null, null, null, true, null))
+                .mapToObj(i -> new LeadResponse((long) i, "E" + i, "SP", null, null, null, null, true, null, null))
                 .toList();
         when(buscaService.filtrar(eq(7L), eq(1L), any())).thenReturn(vinteCinco);
         Model model = new ConcurrentModel();

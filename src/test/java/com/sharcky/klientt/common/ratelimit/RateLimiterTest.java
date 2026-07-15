@@ -30,15 +30,17 @@ class RateLimiterTest {
     }
 
     @Test
-    void recarregaComOTempo() throws InterruptedException {
-        RateLimiter limiter = new RateLimiter();
-        Duration janela = Duration.ofMillis(200);   // 2 tokens / 200ms → ~1 token / 100ms
+    void recarregaComOTempo() {
+        // Relógio controlado → determinístico (sem depender de wall-clock, que é flaky sob carga).
+        long[] agoraNanos = {0L};
+        RateLimiter limiter = new RateLimiter(() -> agoraNanos[0]);
+        Duration janela = Duration.ofMillis(200);   // 2 tokens / 200ms
 
         assertThat(limiter.tryAcquire("k", 2, janela)).isTrue();
         assertThat(limiter.tryAcquire("k", 2, janela)).isTrue();
-        assertThat(limiter.tryAcquire("k", 2, janela)).isFalse();   // esgotado
+        assertThat(limiter.tryAcquire("k", 2, janela)).isFalse();   // esgotado, tempo parado
 
-        Thread.sleep(250);   // > janela → recarrega
+        agoraNanos[0] += Duration.ofMillis(250).toNanos();   // avança o relógio > janela → recarrega
         assertThat(limiter.tryAcquire("k", 2, janela)).isTrue();
     }
 }

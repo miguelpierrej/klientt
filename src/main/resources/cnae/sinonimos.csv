@@ -1,0 +1,84 @@
+# Sinônimos coloquiais → código CNAE (o catálogo dá a descrição oficial).
+# Formato: sinonimo;codigo   (# = comentário). Códigos validados contra o catálogo no arranque.
+# Termos no singular (o matching lida com o plural). Editável sem recompilar.
+
+# --- Saúde ---
+dentista;8630504
+odontologia;8630504
+consultorio odontologico;8630504
+medico;8630503
+clinica medica;8630503
+consultorio medico;8630503
+veterinario;7500100
+clinica veterinaria;7500100
+farmacia;4771701
+drogaria;4771701
+
+# --- Beleza / bem-estar ---
+barbearia;9602501
+cabeleireiro;9602501
+salao de cabeleireiro;9602501
+manicure;9602501
+salao de beleza;9602502
+estetica;9602502
+clinica de estetica;9602502
+academia;9313100
+academia de ginastica;9313100
+
+# --- Alimentação ---
+restaurante;5611201
+lanchonete;5611203
+hamburgueria;5611203
+cafeteria;5611203
+bar;5611205
+padaria;4721102
+confeitaria;4721102
+
+# --- Comércio ---
+supermercado;4711302
+mercearia;4712100
+minimercado;4712100
+mercado;4712100
+pet shop;4789004
+petshop;4789004
+loja de roupas;4781400
+loja de roupa;4781400
+loja de calcados;4782201
+concessionaria;4511101
+loja de carros;4511102
+
+# --- Serviços profissionais ---
+advogado;6911701
+advocacia;6911701
+escritorio de advocacia;6911701
+contador;6920601
+contabilidade;6920601
+escritorio de contabilidade;6920601
+consultoria;7020400
+consultoria empresarial;7020400
+corretor de seguros;6622300
+seguros;6622300
+corretor de imoveis;6821801
+imobiliaria;6821801
+
+# --- Tecnologia / marketing ---
+software;6201501
+desenvolvimento de software;6201501
+empresa de ti;6201501
+agencia de marketing;7311400
+marketing;7311400
+agencia de publicidade;7311400
+publicidade;7311400
+
+# --- Automotivo / construção / transporte ---
+oficina mecanica;4520001
+mecanica;4520001
+construtora;4120400
+construcao civil;4120400
+transportadora;4930202
+
+# --- Educação / hotelaria ---
+escola;8513900
+colegio;8513900
+hotel;5510801
+pousada;5510801

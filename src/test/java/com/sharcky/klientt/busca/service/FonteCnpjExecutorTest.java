@@ -5,10 +5,7 @@ import com.sharcky.klientt.busca.job.JobService;
 import com.sharcky.klientt.cnae.Cnae;
 import com.sharcky.klientt.cnae.ResolvedorCnae;
 import com.sharcky.klientt.cnpj.FonteCnpj;
-import com.sharcky.klientt.cnpj.FonteContatoCnpj;
-import com.sharcky.klientt.cnpj.config.ContatoFallbackProperties;
 import com.sharcky.klientt.cnpj.dto.EmpresaPayload;
-import com.sharcky.klientt.empresa.service.EmpresaCacheService;
 import com.sharcky.klientt.enriquecimento.ScraperClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,16 +29,14 @@ class FonteCnpjExecutorTest {
     @Mock FonteCnpj fonteCnpj;
     @Mock IngestaoService ingestaoService;
     @Mock JobService jobService;
-    @Mock FonteContatoCnpj fonteContato;
-    @Mock ContatoFallbackProperties contatoFallback;
-    @Mock EmpresaCacheService cacheService;
     @Mock ScraperClient scraperClient;   // false por default → executor conclui o job na descoberta
+    @Mock EnriquecimentoContatoService enriquecimentoContato;
     FonteCnpjExecutor executor;
 
     @BeforeEach
     void setUp() {
         executor = new FonteCnpjExecutor(resolvedorCnae, fonteCnpj, ingestaoService, jobService,
-                fonteContato, contatoFallback, cacheService, scraperClient, TAMANHO_PAGINA);
+                scraperClient, enriquecimentoContato, TAMANHO_PAGINA);
     }
 
     private final List<EmpresaPayload> semContato = List.of(new EmpresaPayload(
@@ -112,39 +107,21 @@ class FonteCnpjExecutorTest {
     }
 
     @Test
-    void fallbackLigadoPreencheContatoEmFalta() {
+    void despachaEnriquecimentoDeContatoEmBackground() {
         when(fonteCnpj.buscarPaginaPorCnae("9602501", "São Paulo", null, TAMANHO_PAGINA)).thenReturn(new FonteCnpj.Pagina(semContato, "cur1"));
-        when(contatoFallback.isEnabled()).thenReturn(true);
-        when(fonteContato.consultar("12345678000199"))
-                .thenReturn(new FonteContatoCnpj.Contatos(List.of("11-5555-5555"), List.of()));
 
         executor.executar(7L, TipoBusca.NICHO, "barbearias", "São Paulo", "9602501");
 
-        verify(fonteContato).consultar("12345678000199");
-        verify(cacheService).upsert(any());   // funde o contacto encontrado
+        // Fora do caminho crítico: delega, não bloqueia (o serviço é @Async).
+        verify(enriquecimentoContato).enriquecer(semContato);
     }
 
     @Test
-    void fallbackDesligadoNaoConsulta() {
-        when(fonteCnpj.buscarPaginaPorCnae("9602501", "São Paulo", null, TAMANHO_PAGINA)).thenReturn(new FonteCnpj.Pagina(semContato, "cur1"));
-        when(contatoFallback.isEnabled()).thenReturn(false);
+    void naoEnriqueceQuandoADescobertaFalha() {
+        when(fonteCnpj.buscarPaginaPorCnae(any(), any(), any(), anyInt())).thenThrow(new RuntimeException("API caiu"));
 
         executor.executar(7L, TipoBusca.NICHO, "barbearias", "São Paulo", "9602501");
 
-        verify(fonteContato, never()).consultar(any());
-        verify(cacheService, never()).upsert(any());
-    }
-
-    @Test
-    void fallbackNaoConsultaQuandoJaTemContato() {
-        List<EmpresaPayload> comContato = List.of(new EmpresaPayload(
-                "Barbearia Y", "98765432000111", "11-4444-4444", null, null, "São Paulo", null, null, null,
-                null, List.of("11-4444-4444"), List.of(), List.of()));
-        when(fonteCnpj.buscarPaginaPorCnae("9602501", "São Paulo", null, TAMANHO_PAGINA)).thenReturn(new FonteCnpj.Pagina(comContato, null));
-        when(contatoFallback.isEnabled()).thenReturn(true);
-
-        executor.executar(7L, TipoBusca.NICHO, "barbearias", "São Paulo", "9602501");
-
-        verify(fonteContato, never()).consultar(any());   // já tem contacto → não gasta a consulta
+        verify(enriquecimentoContato, never()).enriquecer(any());
     }
 }

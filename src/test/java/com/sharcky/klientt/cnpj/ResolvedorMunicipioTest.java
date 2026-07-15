@@ -2,6 +2,8 @@ package com.sharcky.klientt.cnpj;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ResolvedorMunicipioTest {
@@ -34,5 +36,26 @@ class ResolvedorMunicipioTest {
         assertThat(resolvedor.codigo("Bauru", null)).contains("3506003");
         // "Bom Jesus" existe em vários estados → ambíguo sem UF.
         assertThat(resolvedor.codigo("Bom Jesus", null)).isEmpty();
+    }
+
+    @Test
+    void sugereCidadesPorPrefixoComAcentoInsensivel() {
+        List<ResolvedorMunicipio.Cidade> s = resolvedor.sugerir("bau", 8);
+        assertThat(s).isNotEmpty();
+        assertThat(s).anySatisfy(c -> {
+            assertThat(c.nome()).isEqualTo("Bauru");
+            assertThat(c.uf()).isEqualTo("SP");
+        });
+
+        // Acento/caixa não importam.
+        assertThat(resolvedor.sugerir("sao paul", 8))
+                .anySatisfy(c -> assertThat(c.nome()).isEqualTo("São Paulo"));
+    }
+
+    @Test
+    void sugerirRespeitaLimiteEQueryCurta() {
+        assertThat(resolvedor.sugerir("a", 8)).isEmpty();   // < 2 chars
+        assertThat(resolvedor.sugerir(null, 8)).isEmpty();
+        assertThat(resolvedor.sugerir("sa", 3)).hasSizeLessThanOrEqualTo(3);
     }
 }

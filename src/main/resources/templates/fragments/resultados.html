@@ -14,13 +14,13 @@
     <div class="busca-loader" role="status" aria-live="polite">
         <div class="loader-spinner" aria-hidden="true"></div>
         <div class="loader-corpo">
-            <p class="loader-titulo">A montar a sua lista de empresas…</p>
+            <p class="loader-titulo">Montando sua lista de empresas…</p>
             <ul class="loader-fases" id="loader-fases">
-                <li data-fase="0">A consultar a base de empresas</li>
-                <li data-fase="1">A reunir contactos (telefone e email)</li>
-                <li data-fase="2">A organizar a sua lista</li>
+                <li data-fase="0">Consultando a base de empresas</li>
+                <li data-fase="1">Reunindo contatos (telefone e e-mail)</li>
+                <li data-fase="2">Organizando sua lista</li>
             </ul>
-            <p class="loader-dica" id="loader-dica">Estamos a recolher tudo — isto costuma ser rápido.</p>
+            <p class="loader-dica" id="loader-dica">Estamos reunindo tudo — costuma ser rápido.</p>
         </div>
     </div>
 
@@ -54,9 +54,9 @@
                 li.classList.toggle('feita', f < fase);
             });
             var dicas = [
-                'A procurar empresas formais do segmento na sua região.',
-                'A reunir os contactos diretos de cada empresa.',
-                'Quase lá — a organizar a sua lista de contactos.'
+                'Procurando empresas formais do segmento na sua região.',
+                'Reunindo os contatos diretos de cada empresa.',
+                'Quase lá — organizando sua lista de contatos.'
             ];
             var dica = document.getElementById('loader-dica');
             if (dica) { dica.textContent = dicas[Math.floor(seg / 4) % dicas.length]; }
@@ -119,6 +119,9 @@
                 <h3 th:text="${lead.nome()}">Nome</h3>
                 <p class="cidade" th:text="${lead.cidade()}">Cidade</p>
                 <div class="sinais">
+                    <span class="tag fit" th:if="${lead.fit()}"
+                          th:classappend="${lead.fit() == 'Ótimo fit'} ? ' fit-otimo'"
+                          th:text="${lead.fit()}">fit</span>
                     <span class="tag" th:classappend="${lead.contactavel()} ? ' ok' : ' alerta'"
                           th:text="${lead.contactavel()} ? 'Com contato' : 'Sem contato'">contato</span>
                     <span class="tag" th:if="${lead.nota()}"><svg th:replace="~{fragments/icones :: estrela}"></svg>

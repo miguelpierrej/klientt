@@ -47,6 +47,8 @@ class BuscaServiceImplTest {
     @Mock FonteCnpj fonteCnpj;
     @Mock IngestaoService ingestaoService;
     @Mock ClienteCnpjProperties cnpjProperties;
+    @Mock com.sharcky.klientt.perfil.PerfilService perfilService;
+    @Mock RelevanciaService relevanciaService;
     @InjectMocks BuscaServiceImpl buscaService;
 
     private final BuscaRequest request = new BuscaRequest(TipoBusca.NICHO, "bares", "Lisboa");
@@ -203,8 +205,8 @@ class BuscaServiceImplTest {
                 .thenReturn(List.of(new JobResultado(5L, 10L), new JobResultado(5L, 11L)));
         when(empresaRepository.findAllById(any())).thenReturn(List.of(e10, e11));
 
-        LeadResponse alfa = new LeadResponse(10L, "Alfa", "Lx", null, "+351910000000", null, null, true, null);
-        LeadResponse beta = new LeadResponse(11L, "Beta", "Lx", null, null, null, null, false, null);
+        LeadResponse alfa = new LeadResponse(10L, "Alfa", "Lx", null, "+351910000000", null, null, true, null, null);
+        LeadResponse beta = new LeadResponse(11L, "Beta", "Lx", null, null, null, null, false, null, null);
         lenient().when(leadMapper.toResponse(e10)).thenReturn(alfa);
         lenient().when(leadMapper.toResponse(e11)).thenReturn(beta);
     }

@@ -25,9 +25,9 @@
             <p class="tagline">Encontre empresas que precisam do seu serviço — não apenas uma lista de telefones.</p>
         </div>
         <div class="utilizador">
-            <span>Olá, <strong sec:authentication="principal.nome">utilizador</strong></span>
+            <span>Olá, <strong sec:authentication="principal.nome">usuário</strong></span>
             <a class="btn-link" th:href="@{/creditos}">Comprar leads</a>
-            <a class="btn-link" th:href="@{/conta}">A minha conta</a>
+            <a class="btn-link" th:href="@{/conta}">Minha conta</a>
             <form method="post" th:action="@{/logout}">
                 <button type="submit" class="btn-link">Sair</button>
             </form>
@@ -50,24 +50,75 @@
                 <option value="NOME">Por nome da empresa</option>
             </select>
         </div>
-        <div class="campo cresce">
+        <div class="campo cresce autocomplete">
             <label for="termo">O que procura?</label>
-            <input type="text" id="termo" name="termo"
-                   placeholder="ex.: barbearias, restaurantes, clínicas..." required>
+            <input type="text" id="termo" name="termo" autocomplete="off"
+                   placeholder="ex.: barbearias, restaurantes, clínicas..."
+                   hx-get="/sugestoes/cnae" hx-trigger="keyup changed delay:250ms"
+                   hx-target="#sug-cnae" hx-swap="innerHTML"
+                   oninput="document.getElementById('cnae').value=''" required>
+            <input type="hidden" id="cnae" name="cnae">
+            <div id="sug-cnae" class="sug-lista"></div>
         </div>
-        <div class="campo">
+        <div class="campo autocomplete">
             <label for="regiao">Cidade / região</label>
-            <input type="text" id="regiao" name="regiao" placeholder="ex.: São Paulo">
+            <input type="text" id="regiao" name="regiao" autocomplete="off" placeholder="ex.: Bauru"
+                   hx-get="/sugestoes/cidade" hx-trigger="keyup changed delay:250ms"
+                   hx-target="#sug-cidade" hx-swap="innerHTML">
+            <div id="sug-cidade" class="sug-lista"></div>
         </div>
         <button type="submit" class="btn">Buscar</button>
     </form>
 
-    <div id="loading" class="loading htmx-indicator">A procurar empresas…</div>
+    <!-- Atalhos "buscar meus alvos" (do perfil): 1 clique preenche nicho+CNAE (+1ª região) e busca. -->
+    <div id="atalhos" class="atalhos" th:if="${!#lists.isEmpty(atalhosNichos)}"
+         th:attr="data-regiao=${#lists.isEmpty(atalhosRegioes)} ? '' : ${atalhosRegioes[0]}">
+        <span class="atalhos-rotulo">Buscar meus alvos:</span>
+        <button type="button" class="atalho-chip" th:each="n : ${atalhosNichos}"
+                th:attr="data-cod=${n.codigo()},data-desc=${n.descricao()}"
+                onclick="klienttBuscarAlvo(this)"
+                th:text="${#strings.isEmpty(n.descricao())} ? ${n.codigoFormatado()} : ${n.descricao()}">nicho</button>
+    </div>
+
+    <div id="loading" class="loading htmx-indicator">Procurando empresas…</div>
 
     <section id="resultados" class="resultados">
-        <p class="vazio">Faça uma busca para ver a sua lista de empresas contactáveis.</p>
+        <p class="vazio">Faça uma busca para ver sua lista de empresas com contato.</p>
     </section>
 </main>
+
+<!-- Autocomplete: seleção fecha o dropdown e (no CNAE) fixa o código, pulando a confirmação. -->
+<script th:inline="none">
+    function klienttSelecionarCnae(el) {
+        document.getElementById('termo').value = el.dataset.desc;
+        document.getElementById('cnae').value = el.dataset.cod;
+        document.getElementById('sug-cnae').innerHTML = '';
+    }
+    function klienttSelecionarCidade(el) {
+        document.getElementById('regiao').value = el.dataset.nome + '/' + el.dataset.uf;
+        document.getElementById('sug-cidade').innerHTML = '';
+    }
+    // Atalho "buscar meu alvo": preenche nicho+CNAE (+1ª região do perfil) e dispara a busca.
+    function klienttBuscarAlvo(el) {
+        document.getElementById('termo').value = el.dataset.desc || el.dataset.cod;
+        document.getElementById('cnae').value = el.dataset.cod;
+        var reg = document.getElementById('atalhos').getAttribute('data-regiao');
+        if (reg) document.getElementById('regiao').value = reg;
+        document.querySelector('.busca-form').requestSubmit();
+    }
+    // Fecha o dropdown ao sair do campo (delay para o clique na sugestão registar primeiro).
+    [['termo', 'sug-cnae'], ['regiao', 'sug-cidade']].forEach(function (par) {
+        var inp = document.getElementById(par[0]);
+        if (inp) {
+            inp.addEventListener('blur', function () {
+                setTimeout(function () {
+                    var s = document.getElementById(par[1]);
+                    if (s) s.innerHTML = '';
+                }, 150);
+            });
+        }
+    });
+</script>
 
 <!-- Feedback imediato ao clicar num lead: spinner enquanto o detalhe carrega. -->
 <div id="modal-carregando" class="modal-carregando" aria-hidden="true"><div class="spinner-modal"></div></div>

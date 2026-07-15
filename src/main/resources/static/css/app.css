@@ -57,7 +57,7 @@ h1, h2, h3, h4 {
 
 ::selection { background: var(--indigo-200); color: var(--indigo-escuro); }
 
-.container { max-width: 920px; margin: 0 auto; padding: 0 22px; }
+.container { max-width: 1040px; margin: 0 auto; padding: 0 22px; }
 
 /* Cabeçalho da app — claro, editorial (não mais faixa azul) */
 .topo {
@@ -159,6 +159,7 @@ h1, h2, h3, h4 {
 .cnae-manual .ajuda { display: block; margin-top: 4px; }
 .cnae-acoes { display: flex; gap: 10px; justify-content: flex-end; }
 .btn-secundario {
+    display: inline-block; text-decoration: none; text-align: center;
     background: var(--superficie); color: var(--cinza); border: 1px solid var(--borda);
     padding: 12px 22px; border-radius: var(--raio-pill); font-size: 1rem; font-weight: 600; cursor: pointer;
     transition: background .15s, color .15s, border-color .15s;
@@ -218,8 +219,12 @@ h1, h2, h3, h4 {
 .busca-form {
     display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;
     background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio);
-    padding: 20px; margin-top: 28px; box-shadow: var(--sombra);
+    padding: 22px; margin-top: 28px; box-shadow: var(--sombra);
+    /* Fica acima do conteúdo seguinte (resultados/loading) para o dropdown não ir para trás deles. */
+    position: relative; z-index: 15;
 }
+/* Campos com autocomplete têm largura mínima confortável (senão o dropdown fica comprimido). */
+.busca-form .campo.autocomplete { min-width: 260px; }
 .campo { display: flex; flex-direction: column; gap: 6px; }
 .campo.cresce { flex: 1; min-width: 200px; }
 .campo label { font-size: .72rem; font-weight: 700; color: var(--cinza); text-transform: uppercase; letter-spacing: .06em; }
@@ -227,6 +232,56 @@ h1, h2, h3, h4 {
     padding: 12px 14px; border: 1px solid var(--borda); border-radius: var(--raio-sm);
     font-size: 1rem; font-family: inherit; background: var(--superficie);
 }
+
+/* Onboarding / perfil (ICP) */
+.onb { max-width: 640px; padding-top: 40px; padding-bottom: 64px; }
+.onb h2 { font-size: 1.9rem; margin: 0 0 6px; }
+.onb-form { display: flex; flex-direction: column; gap: 22px; margin-top: 26px; }
+.onb-titulo { font-size: .78rem; font-weight: 700; color: var(--cinza); text-transform: uppercase; letter-spacing: .05em; }
+.onb-opcoes { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 4px; }
+.onb-opcoes-col { flex-direction: column; gap: 10px; }
+.onb-opcoes .check { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.onb-opcoes input[type="checkbox"] { accent-color: var(--indigo); width: 17px; height: 17px; flex: none; }
+.onb-acoes { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+.onb-pular { margin-top: 14px; text-align: center; }
+.onb-pular .btn-link { color: var(--cinza); border: none; background: none; }
+.onb-pular .btn-link:hover { color: var(--tinta); }
+
+/* Chips (nichos/regiões selecionados) */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.chips:empty { display: none; }
+.chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--indigo-50); color: var(--indigo-escuro);
+    border: 1px solid var(--indigo-200); border-radius: var(--raio-pill);
+    padding: 5px 6px 5px 14px; font-size: .9rem;
+}
+.chip-x {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; padding: 0; border: none; border-radius: 50%;
+    background: rgba(79, 70, 229, .12); color: var(--indigo-escuro);
+    font-size: 1rem; line-height: 1; cursor: pointer;
+}
+.chip-x:hover { background: rgba(79, 70, 229, .25); }
+
+/* Autocomplete (categoria + cidade) */
+.autocomplete { position: relative; }
+.sug-lista {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+    min-width: 260px;
+    background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-sm);
+    margin-top: 6px; box-shadow: var(--sombra-lg); overflow: hidden; max-height: 320px; overflow-y: auto;
+}
+.sug-lista:empty { display: none; }
+.sug-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    width: 100%; text-align: left; background: none; border: none;
+    border-bottom: 1px solid var(--borda); padding: 11px 14px; cursor: pointer; font: inherit;
+}
+.sug-item:last-child { border-bottom: none; }
+.sug-item:hover, .sug-item:focus { background: var(--indigo-50); outline: none; }
+.sug-desc { color: var(--tinta); }
+.sug-cod { color: var(--cinza); font-size: .82rem; white-space: nowrap; }
 
 /* Botões */
 .btn {
@@ -296,6 +351,19 @@ h1, h2, h3, h4 {
 .tag.ok { background: #e7f7ef; color: var(--ok); }
 .tag.alerta { background: #fdf1dd; color: var(--alerta); }
 .tag.perigo { background: #fdeaee; color: var(--perigo); font-weight: 600; }
+/* Badge de relevância (fit ao perfil) */
+.tag.fit { background: var(--indigo-50); color: var(--indigo-escuro); border: 1px solid var(--indigo-200); font-weight: 600; }
+.tag.fit.fit-otimo { background: var(--indigo); color: #fff; border-color: var(--indigo); }
+
+/* Atalhos "buscar meus alvos" (do perfil) */
+.atalhos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }
+.atalhos-rotulo { font-size: .82rem; font-weight: 700; color: var(--cinza); text-transform: uppercase; letter-spacing: .05em; }
+.atalho-chip {
+    background: var(--superficie); border: 1px solid var(--borda); color: var(--tinta);
+    border-radius: var(--raio-pill); padding: 7px 15px; font: inherit; font-size: .9rem; cursor: pointer;
+    transition: border-color .15s, background .15s, color .15s;
+}
+.atalho-chip:hover { border-color: var(--indigo); background: var(--indigo-50); color: var(--indigo-escuro); }
 
 .lead-score { display: flex; flex-direction: column; align-items: center; min-width: 64px; }
 .score-num { font-family: var(--fonte-display); font-size: 1.9rem; font-weight: 800; color: var(--indigo); }
@@ -394,6 +462,53 @@ h1, h2, h3, h4 {
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
+
+/* =========================================================
+   Responsivo — área logada (app)
+   ========================================================= */
+@media (max-width: 640px) {
+    .container { padding: 0 16px; }
+
+    /* Header: empilha e evita a fileira apertada de botões */
+    .topo { position: static; padding: 14px 0; }
+    .barra-topo { flex-direction: column; align-items: stretch; gap: 12px; }
+    .logo { font-size: 1.45rem; }
+    .tagline { display: none; }
+    .utilizador { flex-wrap: wrap; gap: 8px; }
+    .utilizador span { width: 100%; font-size: .88rem; }
+    .utilizador form { display: inline-flex; }
+    .utilizador .btn-link { flex: 1 1 auto; text-align: center; }
+
+    /* Formulário de busca: campos e botão em coluna, largura total */
+    .busca-form { flex-direction: column; align-items: stretch; gap: 12px; padding: 16px; margin-top: 18px; }
+    .busca-form .campo, .busca-form .campo.cresce, .busca-form .campo.autocomplete { width: 100%; min-width: 0; }
+    .busca-form .btn { width: 100%; }
+    .sug-lista { min-width: 0; }
+
+    /* Filtros: exportar ocupa a linha toda em vez de empurrar para o canto */
+    .filtros { padding: 12px 14px; }
+    .filtro-ordenar { width: 100%; }
+    .btn-export { margin-left: 0; width: 100%; text-align: center; }
+
+    /* Leads: nome + score sem apertar; tags quebram */
+    .lead { padding: 15px 16px; gap: 12px; }
+    .lead-info h3 { font-size: 1rem; }
+    .lead-score { min-width: 52px; }
+    .score-num { font-size: 1.5rem; }
+
+    /* Modal: mais respiro na tela pequena */
+    .modal-overlay { padding: 20px 12px; }
+    .modal { padding: 22px 20px; border-radius: 16px; }
+    .modal-cabecalho h2 { font-size: 1.25rem; }
+    .modal-seccao dl { grid-template-columns: 96px 1fr; }
+
+    /* Paginação: quebra em vez de estourar a largura */
+    .paginacao { flex-wrap: wrap; gap: 10px; }
+
+    /* Conta */
+    .conta { padding-top: 28px; }
+    .cartao-conta { padding: 18px 18px; }
 }
 
 /* ============================================================

@@ -11,6 +11,7 @@ import com.sharcky.klientt.busca.service.BuscaService;
 import com.sharcky.klientt.cnae.ResolvedorCnae;
 import com.sharcky.klientt.conta.seguranca.KlienttUserDetails;
 import com.sharcky.klientt.conta.service.CreditosService;
+import com.sharcky.klientt.perfil.PerfilService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,21 +33,30 @@ public class BuscaController {
     private final BuscaService buscaService;
     private final ResolvedorCnae resolvedorCnae;
     private final CreditosService creditosService;
+    private final PerfilService perfilService;
     /** Leads por página na lista de resultados (klientt.busca.tamanho-pagina, default 20). */
     private final int tamanhoPagina;
 
     public BuscaController(BuscaService buscaService, ResolvedorCnae resolvedorCnae,
-                           CreditosService creditosService,
+                           CreditosService creditosService, PerfilService perfilService,
                            @Value("${klientt.busca.tamanho-pagina:20}") int tamanhoPagina) {
         this.buscaService = buscaService;
         this.resolvedorCnae = resolvedorCnae;
         this.creditosService = creditosService;
+        this.perfilService = perfilService;
         this.tamanhoPagina = tamanhoPagina;
     }
 
-    /** App: formulário de busca (autenticado). A raiz "/" é a landing page pública. */
+    /** App: formulário de busca (autenticado). No 1º acesso, redireciona para o onboarding do perfil. */
     @GetMapping("/app")
-    public String index() {
+    public String index(@AuthenticationPrincipal KlienttUserDetails utilizador, Model model) {
+        var perfil = perfilService.obter(utilizador.getId());
+        if (perfil.map(p -> !p.isConcluido()).orElse(true)) {
+            return "redirect:/onboarding";
+        }
+        // Atalhos "buscar meus alvos" a partir do perfil (nichos com descrição + regiões).
+        model.addAttribute("atalhosNichos", perfilService.nichosDetalhados(perfil.get()));
+        model.addAttribute("atalhosRegioes", perfil.get().regioes());
         return "busca";
     }
 

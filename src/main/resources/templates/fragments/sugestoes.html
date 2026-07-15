@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  Fragmentos de autocomplete (HTMX). Renderizam só os botões (sem wrapper) para irem direto
+  no #sug-cnae / #sug-cidade. Vazio → resposta vazia → o container fica :empty (escondido).
+-->
+<th:block th:fragment="cnae" th:if="${!#lists.isEmpty(sugestoes)}"><button th:each="s : ${sugestoes}" type="button" class="sug-item" th:attr="data-cod=${s.codigo()},data-desc=${s.descricao()}" onclick="klienttSelecionarCnae(this)"><span class="sug-desc" th:text="${s.descricao()}">descrição</span><span class="sug-cod" th:text="${s.codigoFormatado()}">0000-0/00</span></button></th:block>
+
+<th:block th:fragment="cidade" th:if="${!#lists.isEmpty(sugestoes)}"><button th:each="c : ${sugestoes}" type="button" class="sug-item" th:attr="data-nome=${c.nome()},data-uf=${c.uf()}" onclick="klienttSelecionarCidade(this)"><span class="sug-desc" th:text="${c.nome()}">Cidade</span><span class="sug-cod" th:text="${c.uf()}">UF</span></button></th:block>
+</body>
+</html>

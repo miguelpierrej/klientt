@@ -7,6 +7,7 @@ import com.sharcky.klientt.cnae.config.CnaeProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -45,7 +46,15 @@ public class GeminiTradutorCnaeLlm implements TradutorCnaeLlm {
 
     public GeminiTradutorCnaeLlm(CnaeProperties properties) {
         this.properties = properties;
-        this.restClient = RestClient.builder().baseUrl(properties.getBaseUrl()).build();
+        this.restClient = RestClient.builder().baseUrl(properties.getBaseUrl()).requestFactory(fabrica()).build();
+    }
+
+    /** Timeouts: se o Gemini demorar/pendurar, falha rápido e cai para o catálogo (não trava o modal). */
+    private static SimpleClientHttpRequestFactory fabrica() {
+        SimpleClientHttpRequestFactory f = new SimpleClientHttpRequestFactory();
+        f.setConnectTimeout(5_000);
+        f.setReadTimeout(12_000);
+        return f;
     }
 
     @Override
@@ -53,7 +62,13 @@ public class GeminiTradutorCnaeLlm implements TradutorCnaeLlm {
         try {
             Map<String, Object> corpo = Map.of(
                     "contents", List.of(Map.of("parts", List.of(Map.of("text", INSTRUCAO + termo)))),
-                    "generationConfig", Map.of("responseMimeType", "application/json", "temperature", 0));
+                    // thinkingBudget=0: desliga o "pensamento" do Gemini 2.5-flash (senão consome o
+                    // orçamento de saída e trunca o JSON) + maxOutputTokens folgado para o JSON caber.
+                    "generationConfig", Map.of(
+                            "responseMimeType", "application/json",
+                            "temperature", 0,
+                            "maxOutputTokens", 1024,
+                            "thinkingConfig", Map.of("thinkingBudget", 0)));
 
             // Lê como String e faz parse localmente (evita depender do conversor Jackson do Spring).
             String corpoResposta = restClient.post()

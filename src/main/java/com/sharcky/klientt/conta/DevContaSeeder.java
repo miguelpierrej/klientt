@@ -3,6 +3,8 @@ package com.sharcky.klientt.conta;
 import com.sharcky.klientt.conta.model.Utilizador;
 import com.sharcky.klientt.conta.repository.PlanoRepository;
 import com.sharcky.klientt.conta.repository.UtilizadorRepository;
+import com.sharcky.klientt.perfil.PerfilCliente;
+import com.sharcky.klientt.perfil.PerfilClienteRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -24,12 +26,14 @@ public class DevContaSeeder implements ApplicationRunner {
     private final UtilizadorRepository utilizadorRepository;
     private final PlanoRepository planoRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PerfilClienteRepository perfilRepository;
 
     public DevContaSeeder(UtilizadorRepository utilizadorRepository, PlanoRepository planoRepository,
-                          PasswordEncoder passwordEncoder) {
+                          PasswordEncoder passwordEncoder, PerfilClienteRepository perfilRepository) {
         this.utilizadorRepository = utilizadorRepository;
         this.planoRepository = planoRepository;
         this.passwordEncoder = passwordEncoder;
+        this.perfilRepository = perfilRepository;
     }
 
     @Override
@@ -47,6 +51,13 @@ public class DevContaSeeder implements ApplicationRunner {
         u.setCreditosLeads(9000);
         planoRepository.findByNome("Agency").or(() -> planoRepository.findByNome("Teste")).ifPresent(u::setPlano);
         utilizadorRepository.save(u);
+
+        // Perfil concluído → dev vai direto para /app (não passa pelo onboarding).
+        PerfilCliente perfil = new PerfilCliente();
+        perfil.setUtilizadorId(u.getId());
+        perfil.setConcluido(true);
+        perfilRepository.save(perfil);
+
         log.info("[DEV] utilizador criado: {} / dev12345", DEV_EMAIL);
     }
 }

@@ -18,6 +18,8 @@ import com.sharcky.klientt.cnpj.config.ClienteCnpjProperties;
 import com.sharcky.klientt.conta.service.CreditosService;
 import com.sharcky.klientt.empresa.model.Empresa;
 import com.sharcky.klientt.empresa.repository.EmpresaRepository;
+import com.sharcky.klientt.perfil.PerfilCliente;
+import com.sharcky.klientt.perfil.PerfilService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,8 @@ public class BuscaServiceImpl implements BuscaService {
     private final FonteCnpj fonteCnpj;
     private final IngestaoService ingestaoService;
     private final ClienteCnpjProperties cnpjProperties;
+    private final PerfilService perfilService;
+    private final RelevanciaService relevanciaService;
 
     public BuscaServiceImpl(JobService jobService, CreditosService creditosService,
                             FonteCnpjExecutor fonteCnpjExecutor,
@@ -49,7 +53,8 @@ public class BuscaServiceImpl implements BuscaService {
                             EmpresaRepository empresaRepository,
                             LeadMapper leadMapper, LeadDetalheMapper detalheMapper,
                             FonteCnpj fonteCnpj, IngestaoService ingestaoService,
-                            ClienteCnpjProperties cnpjProperties) {
+                            ClienteCnpjProperties cnpjProperties,
+                            PerfilService perfilService, RelevanciaService relevanciaService) {
         this.jobService = jobService;
         this.creditosService = creditosService;
         this.fonteCnpjExecutor = fonteCnpjExecutor;
@@ -60,6 +65,8 @@ public class BuscaServiceImpl implements BuscaService {
         this.fonteCnpj = fonteCnpj;
         this.ingestaoService = ingestaoService;
         this.cnpjProperties = cnpjProperties;
+        this.perfilService = perfilService;
+        this.relevanciaService = relevanciaService;
     }
 
     @Override
@@ -81,9 +88,10 @@ public class BuscaServiceImpl implements BuscaService {
             return new ResultadoBusca(jobId, job.getTermo(), job.getEstado(), List.of(), null);
         }
 
+        PerfilCliente perfil = perfilService.obter(utilizadorId).orElse(null);
         List<LeadResponse> leads = empresasDoJob(jobId).stream()
-                .sorted(comparador(OrdenarPor.RELEVANCIA))
-                .map(leadMapper::toResponse)
+                .sorted(comparador(OrdenarPor.RELEVANCIA, perfil))
+                .map(e -> comFit(e, perfil))
                 .toList();
 
         return new ResultadoBusca(jobId, job.getTermo(), job.getEstado(), leads, null);
@@ -92,15 +100,17 @@ public class BuscaServiceImpl implements BuscaService {
     @Override
     @Transactional(readOnly = true)
     public List<LeadResponse> filtrar(Long jobId, Long utilizadorId, FiltroBusca filtro) {
-        return aplicar(jobId, utilizadorId, filtro).stream()
-                .map(leadMapper::toResponse)
+        PerfilCliente perfil = perfilService.obter(utilizadorId).orElse(null);
+        return aplicar(jobId, utilizadorId, filtro, perfil).stream()
+                .map(e -> comFit(e, perfil))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<LeadDetalhe> exportar(Long jobId, Long utilizadorId, FiltroBusca filtro) {
-        return aplicar(jobId, utilizadorId, filtro).stream()
+        PerfilCliente perfil = perfilService.obter(utilizadorId).orElse(null);
+        return aplicar(jobId, utilizadorId, filtro, perfil).stream()
                 .map(detalheMapper::toDetalhe)
                 .toList();
     }
@@ -132,28 +142,38 @@ public class BuscaServiceImpl implements BuscaService {
     }
 
     /** Aplica o filtro e a ordenação aos leads de um job concluído (do utilizador). */
-    private List<Empresa> aplicar(Long jobId, Long utilizadorId, FiltroBusca filtro) {
+    private List<Empresa> aplicar(Long jobId, Long utilizadorId, FiltroBusca filtro, PerfilCliente perfil) {
         JobBusca job = jobDoUtilizador(jobId, utilizadorId);
         if (job.getEstado() != EstadoJob.CONCLUIDO) {
             return List.of();
         }
         return empresasDoJob(jobId).stream()
                 .filter(e -> !filtro.comContato() || e.isContactavel())
-                .sorted(comparador(filtro.ordenarOuPadrao()))
+                .sorted(comparador(filtro.ordenarOuPadrao(), perfil))
                 .toList();
     }
 
-    private Comparator<Empresa> comparador(OrdenarPor ordenar) {
+    private Comparator<Empresa> comparador(OrdenarPor ordenar, PerfilCliente perfil) {
         Comparator<Empresa> porRecente =
                 Comparator.comparing(Empresa::getDataAbertura, Comparator.nullsLast(Comparator.reverseOrder()));
         Comparator<Empresa> porNome =
                 Comparator.comparing(Empresa::getNome, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+        Comparator<Empresa> porContacto = Comparator.comparing(Empresa::isContactavel).reversed();
         return switch (ordenar) {
-            case RELEVANCIA -> Comparator.comparing(Empresa::isContactavel).reversed()
-                    .thenComparing(porRecente).thenComparing(porNome);
+            // Com perfil (ICP), relevância = maior score de fit primeiro; senão, contactável → recente.
+            case RELEVANCIA -> (perfil != null && perfil.temAlvo())
+                    ? Comparator.comparingInt((Empresa e) -> relevanciaService.pontos(perfil, e)).reversed()
+                        .thenComparing(porContacto).thenComparing(porRecente).thenComparing(porNome)
+                    : porContacto.thenComparing(porRecente).thenComparing(porNome);
             case RECENTE -> porRecente.thenComparing(porNome);
             case NOME -> porNome;
         };
+    }
+
+    /** LeadResponse com o rótulo de fit (só quando o perfil tem algum alvo definido). */
+    private LeadResponse comFit(Empresa e, PerfilCliente perfil) {
+        String rotulo = (perfil != null && perfil.temAlvo()) ? relevanciaService.avaliar(perfil, e).rotulo() : null;
+        return leadMapper.toResponse(e).comFit(rotulo);
     }
 
     private List<Empresa> empresasDoJob(Long jobId) {

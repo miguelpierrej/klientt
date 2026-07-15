@@ -24,14 +24,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class ResolvedorCnaeImpl implements ResolvedorCnae {
 
-    /** Sinónimos coloquiais → código CNAE (o catálogo dá a descrição oficial). */
-    private static final Map<String, String> SINONIMOS = sinonimos();
-
     /** Nº máximo de candidatos a propor ao utilizador na confirmação do CNAE. */
     private static final int MAX_CANDIDATOS = 6;
 
     private final Optional<TradutorCnaeLlm> tradutor;
     private final CnaeCatalogoRepository catalogoRepository;
+    private final SinonimoCnae sinonimoCnae;
     private final Map<String, List<Cnae>> cache = new ConcurrentHashMap<>();
     private final Map<String, List<Cnae>> candidatosCache = new ConcurrentHashMap<>();
 
@@ -39,9 +37,11 @@ public class ResolvedorCnaeImpl implements ResolvedorCnae {
     private volatile List<Entrada> indice;
     private volatile Map<String, String> porCodigo;   // codigo → descrição oficial
 
-    public ResolvedorCnaeImpl(Optional<TradutorCnaeLlm> tradutor, CnaeCatalogoRepository catalogoRepository) {
+    public ResolvedorCnaeImpl(Optional<TradutorCnaeLlm> tradutor, CnaeCatalogoRepository catalogoRepository,
+                              SinonimoCnae sinonimoCnae) {
         this.tradutor = tradutor;
         this.catalogoRepository = catalogoRepository;
+        this.sinonimoCnae = sinonimoCnae;
     }
 
     @Override
@@ -51,13 +51,11 @@ public class ResolvedorCnaeImpl implements ResolvedorCnae {
         }
         String alvo = normalizar(termo);
 
-        // 1) Sinónimos coloquiais (validados no catálogo).
-        for (Map.Entry<String, String> s : SINONIMOS.entrySet()) {
-            if (alvo.contains(s.getKey())) {
-                Cnae c = doCatalogo(s.getValue());
-                if (c != null) {
-                    return List.of(c);
-                }
+        // 1) Sinónimos coloquiais (dicionário externo cnae/sinonimos.csv, validados no catálogo).
+        for (String cod : sinonimoCnae.codigosPara(termo)) {
+            Cnae c = doCatalogo(cod);
+            if (c != null) {
+                return List.of(c);
             }
         }
 
@@ -91,10 +89,8 @@ public class ResolvedorCnaeImpl implements ResolvedorCnae {
         LinkedHashMap<String, Cnae> porCodigo = new LinkedHashMap<>();
 
         // 1) sinónimos coloquiais (alta confiança).
-        for (Map.Entry<String, String> s : SINONIMOS.entrySet()) {
-            if (alvo.contains(s.getKey())) {
-                adicionar(porCodigo, doCatalogo(s.getValue()));
-            }
+        for (String cod : sinonimoCnae.codigosPara(termo)) {
+            adicionar(porCodigo, doCatalogo(cod));
         }
         // 2) sugestão do LLM (validada no catálogo).
         tradutor.ifPresent(t -> t.traduzir(termo)
@@ -227,21 +223,5 @@ public class ResolvedorCnaeImpl implements ResolvedorCnae {
     }
 
     private record Entrada(String codigo, String descricao, String descricaoNorm) {
-    }
-
-    private static Map<String, String> sinonimos() {
-        Map<String, String> m = new LinkedHashMap<>();
-        m.put("barbearia", "9602501");
-        m.put("salao de beleza", "9602502");
-        m.put("pet shop", "4789004");
-        m.put("petshop", "4789004");
-        m.put("oficina mecanica", "4520001");
-        m.put("lanchonete", "5611203");
-        m.put("hamburgueria", "5611203");
-        m.put("cafeteria", "5611203");
-        m.put("supermercado", "4711302");
-        m.put("mercado", "4712100");
-        m.put("academia", "9313100");
-        return m;
     }
 }

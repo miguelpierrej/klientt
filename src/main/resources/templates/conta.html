@@ -12,7 +12,7 @@
     <div class="container barra-topo">
         <div>
             <h1 class="logo">Klientt</h1>
-            <p class="tagline">A minha conta</p>
+            <p class="tagline">Minha conta</p>
         </div>
         <div class="utilizador">
             <a class="btn-link" th:href="@{/app}">Buscar</a>
@@ -24,7 +24,7 @@
 </header>
 
 <main class="container conta">
-    <h2>A minha conta</h2>
+    <h2>Minha conta</h2>
 
     <div class="cartao-conta">
         <p><span class="rotulo">Nome</span> <strong th:text="${conta.nome()}">Nome</strong></p>
@@ -44,6 +44,13 @@
         </div>
         <p class="ajuda">A 1ª página de cada busca é grátis. Para ver mais empresas, usa créditos.</p>
         <a class="btn" th:href="@{/creditos}">Comprar leads</a>
+    </div>
+
+    <div class="cartao-conta">
+        <h3>Meu perfil</h3>
+        <p class="ajuda">Diga o que você vende e quem quer alcançar — a Klientt usa isso para sugerir
+            buscas e destacar os leads que mais combinam com você.</p>
+        <a class="btn-secundario" th:href="@{/onboarding}">Editar perfil</a>
     </div>
 </main>
 </body>

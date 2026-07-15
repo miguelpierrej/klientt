@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klientt — seu perfil</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script src="https://unpkg.com/htmx.org@2.0.4" crossorigin="anonymous"></script>
+</head>
+<body>
+<header class="topo">
+    <div class="container">
+        <h1 class="logo">Klientt</h1>
+    </div>
+</header>
+
+<main class="container onb">
+    <h2 th:text="${editar} ? 'Seu perfil' : 'Vamos entender o seu cliente ideal'">Perfil</h2>
+    <p class="ajuda">Isso deixa a Klientt sugerir buscas e destacar os leads que mais fazem sentido pra você.
+        Pode ajustar quando quiser em <strong>Minha conta</strong>.</p>
+
+    <form method="post" th:action="@{/onboarding}" class="onb-form">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+        <div class="campo">
+            <label for="oferta">O que a sua empresa oferece?</label>
+            <input type="text" id="oferta" name="oferta" th:value="${oferta}"
+                   placeholder="ex.: criação de sites, sistema de gestão, consultoria contábil…">
+        </div>
+
+        <!-- Nichos-alvo (chips via autocomplete CNAE) -->
+        <div class="campo">
+            <label for="onb-nicho">Que atividades você quer alcançar?</label>
+            <div class="autocomplete">
+                <input type="text" id="onb-nicho" autocomplete="off"
+                       placeholder="digite um nicho e escolha (ex.: restaurantes)…"
+                       hx-get="/sugestoes/cnae" hx-trigger="keyup changed delay:250ms"
+                       hx-target="#sug-cnae" hx-swap="innerHTML" name="termo">
+                <div id="sug-cnae" class="sug-lista"></div>
+            </div>
+            <div id="nichos-chips" class="chips">
+                <span class="chip" th:each="n : ${nichosPrefill}" th:attr="data-val=${n.codigo()}">
+                    <span th:text="${#strings.isEmpty(n.descricao())} ? ${n.codigoFormatado()} : ${n.descricao()}">nicho</span>
+                    <button type="button" class="chip-x" aria-label="Remover"
+                            onclick="klienttRemoverChip(this,'nichos')">&times;</button>
+                </span>
+            </div>
+            <input type="hidden" id="nichosAlvo" name="nichosAlvo" th:value="${#strings.listJoin(nichosPrefill.![codigo()], ',')}">
+        </div>
+
+        <!-- Regiões-alvo (chips via autocomplete cidade) -->
+        <div class="campo">
+            <label for="onb-regiao">Em que regiões?</label>
+            <div class="autocomplete">
+                <input type="text" id="onb-regiao" autocomplete="off"
+                       placeholder="digite uma cidade e escolha (ex.: Bauru)…"
+                       hx-get="/sugestoes/cidade" hx-trigger="keyup changed delay:250ms"
+                       hx-target="#sug-cidade" hx-swap="innerHTML" name="regiao">
+                <div id="sug-cidade" class="sug-lista"></div>
+            </div>
+            <div id="regioes-chips" class="chips">
+                <span class="chip" th:each="r : ${regioesPrefill}" th:attr="data-val=${r}">
+                    <span th:text="${r}">cidade</span>
+                    <button type="button" class="chip-x" aria-label="Remover"
+                            onclick="klienttRemoverChip(this,'regioes')">&times;</button>
+                </span>
+            </div>
+            <input type="hidden" id="regioesAlvo" name="regioesAlvo" th:value="${#strings.listJoin(regioesPrefill, ',')}">
+        </div>
+
+        <div class="campo">
+            <span class="onb-titulo">Porte das empresas-alvo</span>
+            <div class="onb-opcoes">
+                <label class="check" th:each="p : ${portes}">
+                    <input type="checkbox" name="portes" th:value="${p.key}"
+                           th:checked="${portesSelecionados.contains(p.key)}">
+                    <span th:text="${p.value}">Porte</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="campo">
+            <span class="onb-titulo">O que torna um lead bom pra você?</span>
+            <div class="onb-opcoes onb-opcoes-col">
+                <label class="check">
+                    <input type="checkbox" name="querComContato" th:checked="${querComContato}">
+                    <span>Priorizar quem tem telefone/e-mail</span>
+                </label>
+                <label class="check">
+                    <input type="checkbox" name="querSemSite" th:checked="${querSemSite}">
+                    <span>Prefiro empresas sem site (oportunidade digital)</span>
+                </label>
+                <label class="check">
+                    <input type="checkbox" name="querSimplesMei" th:checked="${querSimplesMei}">
+                    <span>Prefiro optantes do Simples/MEI</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="onb-acoes">
+            <button type="submit" class="btn">Salvar e continuar</button>
+            <a th:if="${editar}" class="btn-link" th:href="@{/conta}">Cancelar</a>
+        </div>
+    </form>
+
+    <form th:unless="${editar}" method="post" th:action="@{/onboarding/pular}" class="onb-pular">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <button type="submit" class="btn-link">Pular por agora</button>
+    </form>
+</main>
+
+<script th:inline="none">
+    // Cada página define estas globais à sua maneira: na busca preenchem o campo; aqui viram chips.
+    function klienttSelecionarCnae(el) {
+        klienttAdicionarChip('nichos-chips', 'nichosAlvo', el.dataset.cod, el.dataset.desc || el.dataset.cod);
+        document.getElementById('onb-nicho').value = '';
+        document.getElementById('sug-cnae').innerHTML = '';
+    }
+    function klienttSelecionarCidade(el) {
+        var val = el.dataset.nome + '/' + el.dataset.uf;
+        klienttAdicionarChip('regioes-chips', 'regioesAlvo', val, el.dataset.nome + ' · ' + el.dataset.uf);
+        document.getElementById('onb-regiao').value = '';
+        document.getElementById('sug-cidade').innerHTML = '';
+    }
+
+    function klienttAdicionarChip(containerId, hiddenId, val, label) {
+        if (!val) return;
+        var cont = document.getElementById(containerId);
+        if (cont.querySelector('.chip[data-val="' + (window.CSS && CSS.escape ? CSS.escape(val) : val) + '"]')) return;
+        var chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.setAttribute('data-val', val);
+        var txt = document.createElement('span');
+        txt.textContent = label;
+        var x = document.createElement('button');
+        x.type = 'button';
+        x.className = 'chip-x';
+        x.setAttribute('aria-label', 'Remover');
+        x.innerHTML = '&times;';
+        x.addEventListener('click', function () { chip.remove(); klienttSincronizar(containerId, hiddenId); });
+        chip.appendChild(txt);
+        chip.appendChild(x);
+        cont.appendChild(chip);
+        klienttSincronizar(containerId, hiddenId);
+    }
+
+    // Chamado pelos × renderizados no servidor (prefill).
+    function klienttRemoverChip(btn, grupo) {
+        var chip = btn.closest('.chip');
+        var containerId = grupo === 'nichos' ? 'nichos-chips' : 'regioes-chips';
+        var hiddenId = grupo === 'nichos' ? 'nichosAlvo' : 'regioesAlvo';
+        if (chip) chip.remove();
+        klienttSincronizar(containerId, hiddenId);
+    }
+
+    function klienttSincronizar(containerId, hiddenId) {
+        var vals = Array.prototype.map.call(
+            document.getElementById(containerId).querySelectorAll('.chip'),
+            function (c) { return c.getAttribute('data-val'); });
+        document.getElementById(hiddenId).value = vals.join(',');
+    }
+
+    // Fecha os dropdowns ao sair do campo.
+    [['onb-nicho', 'sug-cnae'], ['onb-regiao', 'sug-cidade']].forEach(function (par) {
+        var inp = document.getElementById(par[0]);
+        if (inp) inp.addEventListener('blur', function () {
+            setTimeout(function () { var s = document.getElementById(par[1]); if (s) s.innerHTML = ''; }, 150);
+        });
+    });
+</script>
+</body>
+</html>

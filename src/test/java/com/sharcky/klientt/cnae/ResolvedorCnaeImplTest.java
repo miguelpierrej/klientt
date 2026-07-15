@@ -26,9 +26,14 @@ class ResolvedorCnaeImplTest {
         return repo;
     }
 
+    /** Monta o resolver com o dicionário de sinónimos validado contra o mesmo catálogo. */
+    private ResolvedorCnae resolver(Optional<TradutorCnaeLlm> tradutor, CnaeCatalogoRepository repo) {
+        return new ResolvedorCnaeImpl(tradutor, repo, new SinonimoCnae(repo));
+    }
+
     @Test
     void sinonimoColoquialValidadoNoCatalogo() {
-        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), catalogo());
+        ResolvedorCnae r = resolver(Optional.empty(), catalogo());
 
         List<Cnae> res = r.resolver("barbearias em São Paulo");
 
@@ -40,7 +45,7 @@ class ResolvedorCnaeImplTest {
 
     @Test
     void buscaPorDescricaoNoCatalogo() {
-        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), catalogo());
+        ResolvedorCnae r = resolver(Optional.empty(), catalogo());
 
         List<Cnae> res = r.resolver("restaurante");
 
@@ -53,7 +58,7 @@ class ResolvedorCnaeImplTest {
         TradutorCnaeLlm tradutor = mock(TradutorCnaeLlm.class);
         when(tradutor.traduzir("estúdio de tatuagem"))
                 .thenReturn(List.of(new Cnae("9602501", "descrição do LLM (ignorada)")));
-        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.of(tradutor), catalogo());
+        ResolvedorCnae r = resolver(Optional.of(tradutor), catalogo());
 
         List<Cnae> res = r.resolver("estúdio de tatuagem");
 
@@ -67,14 +72,14 @@ class ResolvedorCnaeImplTest {
     void fallbackLlmComCodigoInexistenteEhDescartado() {
         TradutorCnaeLlm tradutor = mock(TradutorCnaeLlm.class);
         when(tradutor.traduzir("coisa exótica")).thenReturn(List.of(new Cnae("0000000", "inventado")));
-        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.of(tradutor), catalogo());
+        ResolvedorCnae r = resolver(Optional.of(tradutor), catalogo());
 
         assertThat(r.resolver("coisa exótica")).isEmpty();   // código não existe no catálogo
     }
 
     @Test
     void semFallbackEForaDoCatalogoDevolveVazio() {
-        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), catalogo());
+        ResolvedorCnae r = resolver(Optional.empty(), catalogo());
 
         assertThat(r.resolver("xyzqualquercoisa")).isEmpty();
     }
@@ -82,7 +87,7 @@ class ResolvedorCnaeImplTest {
     @Test
     void termoVazioDevolveVazio() {
         // Não toca no catálogo — sem stub de findAll.
-        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), mock(CnaeCatalogoRepository.class));
+        ResolvedorCnae r = resolver(Optional.empty(), mock(CnaeCatalogoRepository.class));
 
         assertThat(r.resolver("  ")).isEmpty();
     }
@@ -94,7 +99,7 @@ class ResolvedorCnaeImplTest {
                 cnae("9521500", "REPARAÇÃO E MANUTENÇÃO DE EQUIPAMENTOS ELETRODOMÉSTICOS"),
                 cnae("9511800", "REPARAÇÃO E MANUTENÇÃO DE COMPUTADORES E PERIFÉRICOS"),
                 cnae("9512600", "REPARAÇÃO E MANUTENÇÃO DE EQUIPAMENTOS DE COMUNICAÇÃO")));
-        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), repo);
+        ResolvedorCnae r = resolver(Optional.empty(), repo);
 
         List<Cnae> res = r.candidatos("reparação e manutenção");
 
@@ -104,7 +109,7 @@ class ResolvedorCnaeImplTest {
 
     @Test
     void candidatosUsaSinonimoNoTopo() {
-        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), catalogo());
+        ResolvedorCnae r = resolver(Optional.empty(), catalogo());
 
         List<Cnae> res = r.candidatos("barbearia");
 
@@ -114,7 +119,7 @@ class ResolvedorCnaeImplTest {
 
     @Test
     void candidatosTermoVazioDevolveVazio() {
-        ResolvedorCnae r = new ResolvedorCnaeImpl(Optional.empty(), mock(CnaeCatalogoRepository.class));
+        ResolvedorCnae r = resolver(Optional.empty(), mock(CnaeCatalogoRepository.class));
 
         assertThat(r.candidatos("  ")).isEmpty();
     }

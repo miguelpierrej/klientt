@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongSupplier;
 
 /**
  * Rate limiter em memória (token bucket por chave). Adequado a uma instância única (Railway).
@@ -17,6 +18,16 @@ public class RateLimiter {
     private static final int MAX_BUCKETS = 50_000;
 
     private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
+    /** Relógio em nanossegundos — injetável para tornar os testes determinísticos. */
+    private final LongSupplier relogioNanos;
+
+    public RateLimiter() {
+        this(System::nanoTime);
+    }
+
+    RateLimiter(LongSupplier relogioNanos) {   // visível para testes
+        this.relogioNanos = relogioNanos;
+    }
 
     /**
      * Consome 1 token da chave. Devolve {@code true} se dentro do limite, {@code false} se excedeu.
@@ -26,7 +37,7 @@ public class RateLimiter {
         if (buckets.size() >= MAX_BUCKETS) {
             removerOciosos();
         }
-        Bucket bucket = buckets.computeIfAbsent(chave, k -> new Bucket(capacidade, janela.toNanos()));
+        Bucket bucket = buckets.computeIfAbsent(chave, k -> new Bucket(capacidade, janela.toNanos(), relogioNanos));
         return bucket.tryConsume();
     }
 
@@ -39,14 +50,16 @@ public class RateLimiter {
     private static final class Bucket {
         private final double capacidade;
         private final double tokensPorNano;
+        private final LongSupplier relogio;
         private double tokens;
         private long ultimoNano;
 
-        Bucket(int capacidade, long janelaNanos) {
+        Bucket(int capacidade, long janelaNanos, LongSupplier relogio) {
             this.capacidade = capacidade;
             this.tokensPorNano = (double) capacidade / janelaNanos;
+            this.relogio = relogio;
             this.tokens = capacidade;
-            this.ultimoNano = System.nanoTime();
+            this.ultimoNano = relogio.getAsLong();
         }
 
         synchronized boolean tryConsume() {
@@ -64,7 +77,7 @@ public class RateLimiter {
         }
 
         private void recarregar() {
-            long agora = System.nanoTime();
+            long agora = relogio.getAsLong();
             tokens = Math.min(capacidade, tokens + (agora - ultimoNano) * tokensPorNano);
             ultimoNano = agora;
         }

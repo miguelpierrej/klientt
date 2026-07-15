@@ -11,7 +11,7 @@ class PaginaLeadsTest {
 
     private static List<LeadResponse> leads(int n) {
         return IntStream.rangeClosed(1, n)
-                .mapToObj(i -> new LeadResponse((long) i, "E" + i, "SP", null, null, null, null, true, null))
+                .mapToObj(i -> new LeadResponse((long) i, "E" + i, "SP", null, null, null, null, true, null, null))
                 .toList();
     }
 
